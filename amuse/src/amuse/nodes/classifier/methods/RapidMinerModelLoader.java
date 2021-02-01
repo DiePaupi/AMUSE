@@ -21,7 +21,7 @@
  * 
  * Creation date: 21.01.2008
  */
-package amuse.nodes.classifier.methods.supervised;
+package amuse.nodes.classifier.methods;
 
 import java.io.File;
 import java.util.ArrayList;

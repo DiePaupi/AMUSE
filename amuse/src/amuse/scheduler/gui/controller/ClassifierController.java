@@ -366,7 +366,7 @@ public class ClassifierController extends AbstractController {
          */
         @Override
         public String getCaption() {
-            return "Classification Training Configurator";
+            return "Classification Configurator";
         }
 
         public void addTraining() {
