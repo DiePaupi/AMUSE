@@ -647,37 +647,8 @@ public class ClassificationConfiguration extends TaskConfiguration {
 			Integer currentClassificationWindowSize = new Double(classifierConfig.getClassificationWindowSizeAttribute().getValueAt(i)).intValue();
 			Integer currentClassificationWindowOverlap = new Double(classifierConfig.getClassificationWindowOverlapAttribute().getValueAt(i)).intValue();
 			String currentAlgorithmDescription = classifierConfig.getClassificationAlgorithmIdAttribute().getValueAt(i).toString();
-			int currentGroundTruthSource = classifierConfig.getGroundTruthSourceAttribute().getValueAt(i).intValue();
-			String attributesToPredictString = classifierConfig.getAttributesToPredictAttribute().getValueAt(i).toString();
-			attributesToPredictString = attributesToPredictString.replaceAll("\\[", "").replaceAll("\\]", "");
-			String[] attributesToPredictStringArray = attributesToPredictString.split("\\s*,\\s*");
-			List<Integer> currentAttributesToPredict = new ArrayList<Integer>();
-			try {
-				for(String str : attributesToPredictStringArray) {
-					if(!str.equals("")) {
-						currentAttributesToPredict.add(Integer.parseInt(str));
-					}
-				}
-			} catch(NumberFormatException e) {
-				throw new IOException("The attributes to classify were not properly specified.");
-			}
 			
-			String attributesToIgnoreString = classifierConfig.getAttributesToIgnoreAttribute().getValueAt(i).toString();
-			attributesToIgnoreString = attributesToIgnoreString.replaceAll("\\[", "").replaceAll("\\]", "");
-			String[] attributesToIgnoreStringArray = attributesToIgnoreString.split("\\s*,\\s*");
-			List<Integer> currentAttributesToIgnore = new ArrayList<Integer>();
-			try {
-				for(String str : attributesToIgnoreStringArray) {
-					if(!str.equals("")) {
-						currentAttributesToIgnore.add(Integer.parseInt(str));
-					}
-				}
-			} catch(NumberFormatException e) {
-				AmuseLogger.write(ClassificationConfiguration.class.getName(), Level.WARN,
-						"The attributes to ignore were not properly specified. All features will be used for classification.");
-				currentAttributesToIgnore = new ArrayList<Integer>();
-			}
-			
+			// Get ModelType
 			RelationshipType currentRelationshipType;
 			if(classifierConfig.getRelationshipTypeAttribute().getValueAt(i).toString().equals("BINARY")) {
 				currentRelationshipType = RelationshipType.BINARY;
@@ -711,8 +682,21 @@ public class ClassificationConfiguration extends TaskConfiguration {
 			
 			ModelType currentModelType = new ModelType(currentRelationshipType, currentLabelType, currentMethodType);
 			
-			String currentPathToInputModel = classifierConfig.getPathToInputModelAttribute().getValueAt(i);
-			
+			String attributesToIgnoreString = classifierConfig.getAttributesToIgnoreAttribute().getValueAt(i).toString();
+			attributesToIgnoreString = attributesToIgnoreString.replaceAll("\\[", "").replaceAll("\\]", "");
+			String[] attributesToIgnoreStringArray = attributesToIgnoreString.split("\\s*,\\s*");
+			List<Integer> currentAttributesToIgnore = new ArrayList<Integer>();
+			try {
+				for(String str : attributesToIgnoreStringArray) {
+					if(!str.equals("")) {
+						currentAttributesToIgnore.add(Integer.parseInt(str));
+					}
+				}
+			} catch(NumberFormatException e) {
+				AmuseLogger.write(ClassificationConfiguration.class.getName(), Level.WARN,
+						"The attributes to ignore were not properly specified. All features will be used for classification.");
+				currentAttributesToIgnore = new ArrayList<Integer>();
+			}
 			
 			Integer currentMergeSongResults = (new Double(classifierConfig.getMergeSongResultsAttribute().getValueAt(i).toString())).intValue();
 			String currentOutputResult = classifierConfig.getOutputResultAttribute().getValueAt(i).toString();
@@ -725,11 +709,42 @@ public class ClassificationConfiguration extends TaskConfiguration {
 				ist = InputSourceType.READY_INPUT;
 			}
 			
-			String currentTrainingDescription = classifierConfig.getTrainingDescriptionAttribute().getValueAt(i);
+			// Do supervised methods parameters need to be set?
+			if (currentMethodType == MethodType.SUPERVISED) {
+					int currentGroundTruthSource = classifierConfig.getGroundTruthSourceAttribute().getValueAt(i).intValue();
+							
+					String attributesToPredictString = classifierConfig.getAttributesToPredictAttribute().getValueAt(i).toString();
+					attributesToPredictString = attributesToPredictString.replaceAll("\\[", "").replaceAll("\\]", "");
+					String[] attributesToPredictStringArray = attributesToPredictString.split("\\s*,\\s*");
+					List<Integer> currentAttributesToPredict = new ArrayList<Integer>();
+					try {
+						for(String str : attributesToPredictStringArray) {
+							if(!str.equals("")) {
+								currentAttributesToPredict.add(Integer.parseInt(str));
+							}
+						}
+					} catch(NumberFormatException e) {
+						throw new IOException("The attributes to classify were not properly specified.");
+					}
+							
+					String currentPathToInputModel = classifierConfig.getPathToInputModelAttribute().getValueAt(i);
+					String currentTrainingDescription = classifierConfig.getTrainingDescriptionAttribute().getValueAt(i);
+					
+					// Create a classification task
+				    taskConfigurations.add(new ClassificationConfiguration(ist, currentInputSource, currentAttributesToIgnore,
+				    		currentInputFeatureDescription, currentInputFeatureType, currentClassificationWindowSize, currentClassificationWindowOverlap,
+				    		currentAlgorithmDescription, currentGroundTruthSource, currentAttributesToPredict, currentModelType, currentMergeSongResults,
+				    		currentOutputResult, currentPathToInputModel, currentTrainingDescription));
+			} else if (currentMethodType == MethodType.UNSUPERVISED) {
+					// Create a classification task
+			    	taskConfigurations.add(new ClassificationConfiguration(ist, currentInputSource, currentAttributesToIgnore,
+			    			currentInputFeatureDescription, currentInputFeatureType, currentClassificationWindowSize, currentClassificationWindowOverlap,
+			    			currentAlgorithmDescription, currentModelType, currentMergeSongResults, currentOutputResult));
+			} else {
+					throw new IOException("ClassificationConfiguration - LoadConfigurationsFromDataSet: "
+							+ "The loaded method type didn't match any which is currently supported.");
+			}
 			
-			// Create a classification task
-		    taskConfigurations.add(new ClassificationConfiguration(ist, currentInputSource, currentAttributesToIgnore, currentInputFeatureDescription, currentInputFeatureType, currentClassificationWindowSize, currentClassificationWindowOverlap,
-		    		currentAlgorithmDescription, currentGroundTruthSource, currentAttributesToPredict, currentModelType, currentMergeSongResults, currentOutputResult, currentPathToInputModel, currentTrainingDescription));
 			AmuseLogger.write(ClassificationConfiguration.class.getName(), Level.DEBUG, "Classification task loaded");
 		}
 		

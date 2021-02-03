@@ -36,6 +36,7 @@ import javax.swing.JPanel;
 import amuse.data.FeatureTable;
 import amuse.data.InputFeatureType;
 import amuse.data.ModelType;
+import amuse.data.ModelType.MethodType;
 import amuse.data.datasets.ClassifierConfigSet;
 import amuse.data.io.DataSetAbstract;
 import amuse.interfaces.nodes.TaskConfiguration;
@@ -72,7 +73,7 @@ public class ClassifierController extends AbstractController {
     }
 
     @Override
-    public void saveTask(File file) {
+    public void saveTask(File file) throws IllegalArgumentException {
         file = addArff(file);
         if (!askOverwrite(file)) {
             return;
@@ -116,8 +117,10 @@ public class ClassifierController extends AbstractController {
         String trainingDescription = classifierView.getTrainingDescription();
         String pathToInputModel = classifierView.getPathToInputModel();
         
+//TODO: Paupi - is this legit?        
         ClassifierConfigSet dataSet;
-        dataSet = new ClassifierConfigSet(
+        if (classifierView.getModelType().getMethodType() == MethodType.SUPERVISED) {
+        	dataSet = new ClassifierConfigSet(
 	        		inputSource, 
 	        		inputSourceType,
 	        		attributesToIgnore,
@@ -135,6 +138,26 @@ public class ClassifierController extends AbstractController {
 	        		outputResultPath,
 	        		pathToInputModel,
 	        		trainingDescription);
+        } else if (classifierView.getModelType().getMethodType() == MethodType.UNSUPERVISED) {
+        	dataSet = new ClassifierConfigSet(
+	        		inputSource, 
+	        		inputSourceType,
+	        		attributesToIgnore,
+	        		inputFeatureDescription, 
+	        		inputFeatureType,
+	        		classificationWindowSize,
+	        		classificationWindowOverlap,
+	        		algorithmId, 
+	        		relationshipType,
+	        		labelType,
+	        		methodType,
+	        		mergeSongResults,
+	        		outputResultPath);
+        } else {
+        	throw new IllegalArgumentException ("ClassifierController - SaveTask(File file): "
+        			+ "The MethodType was neither superveised nor unsupervised");
+        }
+        
         
         //if the input is given as files a file list must be saved
         if(classifierView.getInputSourceType() == InputSourceType.FILE_LIST) {
@@ -272,26 +295,59 @@ public class ClassifierController extends AbstractController {
             if(inputFeatureType == InputFeatureType.RAW_FEATURES) {
             	FeatureTable inputFeatures = classifierView.getInputFeatures();
             	// Save Files and Features:
- //TODO: Paupi - edit for (un)supervised
-	            conf = new ClassificationConfiguration(
-	            		InputSourceType.valueOf(inputSourceType),
-	            		inputSource,
-	            		attributesToIgnore,
-	            		inputFeatures, 
-	            		classificationWindowSize,
-	            		classificationWindowOverlap,
-	            		algorithmStr, 
-	            		groundTruthCategoryId,
-	            		attributesToPredict,
-	            		modelType,
-	            		mergeSongResults, 
-	            		outputResultPath,
-	            		pathToInputModel,
-	            		trainingDescription);
+            	// Uses the MethodType to choose the right ClassificationConfiguration constructor and pass the right parameters
+            	if(modelType.getMethodType() == MethodType.SUPERVISED) {
+            		conf = new ClassificationConfiguration(
+    	            		InputSourceType.valueOf(inputSourceType),
+    	            		inputSource,
+    	            		attributesToIgnore,
+    	            		inputFeatures, 
+    	            		classificationWindowSize,
+    	            		classificationWindowOverlap,
+    	            		algorithmStr, 
+    	            		groundTruthCategoryId,
+    	            		attributesToPredict,
+    	            		modelType,
+    	            		mergeSongResults, 
+    	            		outputResultPath,
+    	            		pathToInputModel,
+    	            		trainingDescription);
+            	} else if (modelType.getMethodType() == MethodType.UNSUPERVISED) {
+            		conf = new ClassificationConfiguration(
+    	            		InputSourceType.valueOf(inputSourceType),
+    	            		inputSource,
+    	            		attributesToIgnore,
+    	            		inputFeatures, 
+    	            		classificationWindowSize,
+    	            		classificationWindowOverlap,
+    	            		algorithmStr, 
+    	            		modelType,
+    	            		mergeSongResults, 
+    	            		outputResultPath);
+            	}
             } else {
             	String processedFeatureDescription = classifierView.getProcessingModelString();
 	            // Save Files and Features:
-	            conf = new ClassificationConfiguration(
+            	// Uses the MethodType to choose the right ClassificationConfiguration constructor and pass the right parameters
+	            if (modelType.getMethodType() == MethodType.SUPERVISED) {
+	            	conf = new ClassificationConfiguration(
+		            		InputSourceType.valueOf(inputSourceType),
+		            		inputSource,
+		            		attributesToIgnore,
+		            		processedFeatureDescription, 
+		            		inputFeatureType,
+		            		classificationWindowSize,
+		            		classificationWindowOverlap,
+		            		algorithmStr, 
+		            		groundTruthCategoryId,
+		            		attributesToPredict,
+		            		modelType,
+		            		mergeSongResults, 
+		            		outputResultPath,
+		            		pathToInputModel,
+		            		trainingDescription);
+	            } else if (modelType.getMethodType() == MethodType.UNSUPERVISED) {
+	            	conf = new ClassificationConfiguration(
 	            		InputSourceType.valueOf(inputSourceType),
 	            		inputSource,
 	            		attributesToIgnore,
@@ -299,14 +355,11 @@ public class ClassifierController extends AbstractController {
 	            		inputFeatureType,
 	            		classificationWindowSize,
 	            		classificationWindowOverlap,
-	            		algorithmStr, 
-	            		groundTruthCategoryId,
-	            		attributesToPredict,
+	            		algorithmStr,
 	            		modelType,
 	            		mergeSongResults, 
-	            		outputResultPath,
-	            		pathToInputModel,
-	            		trainingDescription);
+	            		outputResultPath);
+	            }
             }
         } catch (IOException ex) {
             showErr(ex.getLocalizedMessage());

@@ -102,17 +102,12 @@ public class ClassifierConfigSet extends AbstractArffExperimentSet {
 		dataSet.checkNominalAttribute(strInputFeatureType);
 		dataSet.checkNumericAttribute(strClassificationWindowSize);
 		dataSet.checkNumericAttribute(strClassificationWindowOverlap);
-		dataSet.checkStringAttribute(strTrainingAlgorithmID);
-		dataSet.checkStringAttribute(strAttributesToPredict);
 		dataSet.checkStringAttribute(strAttributesToIgnore);
 		dataSet.checkNominalAttribute(strRelationshipType);
 		dataSet.checkNominalAttribute(strLabelType);
 		dataSet.checkNominalAttribute(strMethodType);
-		dataSet.checkStringAttribute(strPathToInputModel);
-		dataSet.checkNumericAttribute(strGroundTruthCategoryId);
 		dataSet.checkNumericAttribute(strMergeSongResults);
 		dataSet.checkStringAttribute(strOutputResult);
-		dataSet.checkStringAttribute(strTrainingDescription);
 		
 		inputSourceAttribute = (StringAttribute) dataSet.getAttribute(strInputSource);
 		inputSourceTypeAttribute = (NominalAttribute) dataSet.getAttribute(strInputSourceType);
@@ -120,17 +115,12 @@ public class ClassifierConfigSet extends AbstractArffExperimentSet {
 		inputFeatureTypeAttribute = (NominalAttribute) dataSet.getAttribute(strInputFeatureType);
 		classificationWindowSizeAttribute = (NumericAttribute) dataSet.getAttribute(strClassificationWindowSize);
 		classificationWindowOverlapAttribute = (NumericAttribute) dataSet.getAttribute(strClassificationWindowOverlap);
-		classificationAlgorithmIdAttribute = (StringAttribute) dataSet.getAttribute(strTrainingAlgorithmID);
-		groundTruthCategoryIdAttribute = (NumericAttribute) dataSet.getAttribute(strGroundTruthCategoryId);
-		attributesToPredictAttribute = (StringAttribute) dataSet.getAttribute(strAttributesToPredict);
 		attributesToIgnoreAttribute = (StringAttribute) dataSet.getAttribute(strAttributesToIgnore);
 		relationshipTypeAttribute = (NominalAttribute) dataSet.getAttribute(strRelationshipType);
 		labelTypeAttribute = (NominalAttribute) dataSet.getAttribute(strLabelType);
 		methodTypeAttribute = (NominalAttribute) dataSet.getAttribute(strMethodType);
-		pathToInputModelAttribute = (StringAttribute) dataSet.getAttribute(strPathToInputModel);
 		mergeSongResultsAttribute = (NumericAttribute) dataSet.getAttribute(strMergeSongResults);
 		outputResultAttribute = (StringAttribute) dataSet.getAttribute(strOutputResult);
-		trainingDescriptionAttribute = (StringAttribute) dataSet.getAttribute(strTrainingDescription);
 		
 		addAttribute(inputSourceAttribute);
 		addAttribute(inputSourceTypeAttribute);
@@ -139,15 +129,40 @@ public class ClassifierConfigSet extends AbstractArffExperimentSet {
 		addAttribute(inputFeatureTypeAttribute);
 		addAttribute(classificationWindowSizeAttribute);
 		addAttribute(classificationWindowOverlapAttribute);
-		addAttribute(classificationAlgorithmIdAttribute);
-		addAttribute(groundTruthCategoryIdAttribute);
 		addAttribute(mergeSongResultsAttribute);
-		addAttribute(attributesToPredictAttribute);
 		addAttribute(relationshipTypeAttribute);
 		addAttribute(labelTypeAttribute);
 		addAttribute(methodTypeAttribute);
 		addAttribute(outputResultAttribute);
-		addAttribute(trainingDescriptionAttribute);
+		
+		//(UN)supervised
+		if (methodTypeAttribute == (NominalAttribute) dataSet.getAttribute("SUPERVISED")) {
+			dataSet.checkStringAttribute(strTrainingAlgorithmID);
+			dataSet.checkStringAttribute(strAttributesToPredict);
+			dataSet.checkStringAttribute(strPathToInputModel);
+			dataSet.checkNumericAttribute(strGroundTruthCategoryId);
+			dataSet.checkStringAttribute(strTrainingDescription);
+	
+			classificationAlgorithmIdAttribute = (StringAttribute) dataSet.getAttribute(strTrainingAlgorithmID);
+			attributesToPredictAttribute = (StringAttribute) dataSet.getAttribute(strAttributesToPredict);
+			pathToInputModelAttribute = (StringAttribute) dataSet.getAttribute(strPathToInputModel);
+			groundTruthCategoryIdAttribute = (NumericAttribute) dataSet.getAttribute(strGroundTruthCategoryId);
+			trainingDescriptionAttribute = (StringAttribute) dataSet.getAttribute(strTrainingDescription);
+	
+			addAttribute(classificationAlgorithmIdAttribute);
+			addAttribute(groundTruthCategoryIdAttribute);
+			addAttribute(attributesToPredictAttribute);
+			addAttribute(trainingDescriptionAttribute);
+		} else if (methodTypeAttribute == (NominalAttribute) dataSet.getAttribute("UNSUPERVISED")) {
+			classificationAlgorithmIdAttribute = null;
+			attributesToPredictAttribute = null;
+			pathToInputModelAttribute = null;
+			groundTruthCategoryIdAttribute = null;
+			trainingDescriptionAttribute = null;
+		} else {
+			throw new DataSetException ("ClassifierConfigSet - ClassifierConfigSet(DataSetAbstract dataSet): "
+					+ "The MethodType was neither supervised nor unsupervised");
+		}
 	}
 
 
@@ -166,16 +181,12 @@ public class ClassifierConfigSet extends AbstractArffExperimentSet {
 		checkNumericAttribute(strClassificationWindowSize);
 		checkNumericAttribute(strClassificationWindowOverlap);
 		checkStringAttribute(strTrainingAlgorithmID);
-		checkNumericAttribute(strGroundTruthCategoryId);
-		checkStringAttribute(strAttributesToPredict);
 		checkStringAttribute(strAttributesToIgnore);
 		checkNominalAttribute(strRelationshipType);
 		checkNominalAttribute(strLabelType);
 		checkNominalAttribute(strMethodType);
-		checkStringAttribute(strPathToInputModel);
 		checkNumericAttribute(strMergeSongResults);
 		checkStringAttribute(strOutputResult);
-		checkStringAttribute(strTrainingDescription);
 		
 		inputSourceAttribute = (StringAttribute) getAttribute(strInputSource);
 		inputSourceTypeAttribute = (NominalAttribute) getAttribute(strInputSourceType);
@@ -184,18 +195,38 @@ public class ClassifierConfigSet extends AbstractArffExperimentSet {
 		classificationWindowSizeAttribute = (NumericAttribute) getAttribute(strClassificationWindowSize);
 		classificationWindowOverlapAttribute = (NumericAttribute) getAttribute(strClassificationWindowOverlap);
 		classificationAlgorithmIdAttribute = (StringAttribute) getAttribute(strTrainingAlgorithmID);
-		groundTruthCategoryIdAttribute = (NumericAttribute) getAttribute(strGroundTruthCategoryId);
-		attributesToPredictAttribute = (StringAttribute) this.getAttribute(strAttributesToPredict);
 		attributesToIgnoreAttribute = (StringAttribute) this.getAttribute(strAttributesToIgnore);
 		relationshipTypeAttribute = (NominalAttribute) this.getAttribute(strRelationshipType);
 		labelTypeAttribute = (NominalAttribute) this.getAttribute(strLabelType);
 		methodTypeAttribute = (NominalAttribute) this.getAttribute(strMethodType);
-		pathToInputModelAttribute = (StringAttribute) this.getAttribute(strPathToInputModel);
 		mergeSongResultsAttribute = (NumericAttribute) getAttribute(strMergeSongResults);
 		outputResultAttribute = (StringAttribute) getAttribute(strOutputResult);
-		trainingDescriptionAttribute = (StringAttribute) getAttribute(strTrainingDescription);
+		
+		// (UN)supervised
+		if (methodTypeAttribute == (NominalAttribute) this.getAttribute("SUPERVISED")) {
+			checkNumericAttribute(strGroundTruthCategoryId);
+			checkStringAttribute(strAttributesToPredict);
+			checkStringAttribute(strPathToInputModel);
+			checkStringAttribute(strTrainingDescription);
+
+			groundTruthCategoryIdAttribute = (NumericAttribute) getAttribute(strGroundTruthCategoryId);
+			attributesToPredictAttribute = (StringAttribute) this.getAttribute(strAttributesToPredict);
+			pathToInputModelAttribute = (StringAttribute) this.getAttribute(strPathToInputModel);
+			trainingDescriptionAttribute = (StringAttribute) getAttribute(strTrainingDescription);
+		} else if (methodTypeAttribute == (NominalAttribute) this.getAttribute("UNSUPERVISED")) {
+			groundTruthCategoryIdAttribute = null;
+			attributesToPredictAttribute = null;
+			pathToInputModelAttribute = null;
+			trainingDescriptionAttribute = null;
+		} else {
+			throw new DataSetException ("ClassifierConfigSet - ClassifierConfigSet(File file): "
+					+ "The MethodType was neither supervised nor unsupervised");
+		}
 	}
 
+	/**
+	 * Parameters for supervised learning
+	 */
 	public ClassifierConfigSet( List<File> inputFileList,
 			List<String> inputSourceTypeList,
 			List<String> attributesToIgnore,
@@ -270,7 +301,81 @@ public class ClassifierConfigSet extends AbstractArffExperimentSet {
 		addAttribute(outputResultAttribute);
 		addAttribute(trainingDescriptionAttribute);
 	}
+	
+	/**
+	 * Parameters for unsupervised learning
+	 */
+	public ClassifierConfigSet( List<File> inputFileList,
+			List<String> inputSourceTypeList,
+			List<String> attributesToIgnore,
+			List<String> inputFeatures,
+			List<String> inputFeatureTypes,
+			List<Integer> classificationWindowSizes,
+			List<Integer> classificationWindowOverlaps,
+			List<String> algorithmIDs,
+			List<String> relationshipTypes,
+			List<String> labelTypes,
+			List<String> methodTypes,
+			List<Integer> mergeSongResults,
+			List<String> outputResultPaths) {
+		super(strDataSetName);
+		List<String> files = new ArrayList<String>();
+		for (File f: inputFileList)
+			files.add(f.getAbsolutePath());
+		inputSourceAttribute = new StringAttribute(strInputSource, files);
+		inputSourceTypeAttribute = new NominalAttribute(strInputSourceType, getAllowedValues(), inputSourceTypeList);
+		inputFeaturesAttribute = new StringAttribute(strInputFeatures, inputFeatures);
+		List<String> inputFeatureTypeValues = new ArrayList<String>();
+		for(InputFeatureType type : InputFeatureType.values()) {
+			inputFeatureTypeValues.add(type.toString());
+		}
+		inputFeatureTypeAttribute = new NominalAttribute(strInputFeatureType, inputFeatureTypeValues, inputFeatureTypes);
+		classificationWindowSizeAttribute = NumericAttribute.createFromIntList(strClassificationWindowSize, classificationWindowSizes);
+		classificationWindowOverlapAttribute = NumericAttribute.createFromIntList(strClassificationWindowOverlap, classificationWindowOverlaps);
+		classificationAlgorithmIdAttribute = new StringAttribute(strTrainingAlgorithmID, algorithmIDs);
+		groundTruthCategoryIdAttribute = null;
+		attributesToPredictAttribute = null;
+		attributesToIgnoreAttribute = new StringAttribute(strAttributesToIgnore, attributesToIgnore);
+		
+		List<String> relationshipTypeValues = new ArrayList<String>();
+		List<String> labelTypeValues = new ArrayList<String>();
+		List<String> methodTypeValues = new ArrayList<String>();
+		for(RelationshipType type : RelationshipType.values()) {
+			relationshipTypeValues.add(type.toString());
+		}
+		for(LabelType type : LabelType.values()) {
+			labelTypeValues.add(type.toString());
+		}
+		for(MethodType type : MethodType.values()) {
+			methodTypeValues.add(type.toString());
+		}
+		relationshipTypeAttribute = new NominalAttribute(strRelationshipType, relationshipTypeValues, relationshipTypes);
+		labelTypeAttribute = new NominalAttribute(strLabelType, labelTypeValues, labelTypes);
+		methodTypeAttribute = new NominalAttribute(strMethodType, methodTypeValues, methodTypes);
+		pathToInputModelAttribute = null;
+		mergeSongResultsAttribute = NumericAttribute.createFromIntList(strMergeSongResults, mergeSongResults);
+		outputResultAttribute = new StringAttribute(strOutputResult, outputResultPaths);
+		trainingDescriptionAttribute = null;
+		
+		addAttribute(inputSourceAttribute);
+		addAttribute(inputSourceTypeAttribute);
+		addAttribute(attributesToIgnoreAttribute);
+		addAttribute(inputFeaturesAttribute);
+		addAttribute(inputFeatureTypeAttribute);
+		addAttribute(classificationWindowSizeAttribute);
+		addAttribute(classificationWindowOverlapAttribute);
+		addAttribute(classificationAlgorithmIdAttribute);
+		addAttribute(relationshipTypeAttribute);
+		addAttribute(labelTypeAttribute);
+		addAttribute(methodTypeAttribute);
+		addAttribute(mergeSongResultsAttribute);
+		addAttribute(outputResultAttribute);
+	}
 
+	
+	/**
+	 * Parameters for supervised learning
+	 */
 	public ClassifierConfigSet( String inputSource,
 			String inputSourceType,
 			String attributesToIgnore,
@@ -350,6 +455,82 @@ public class ClassifierConfigSet extends AbstractArffExperimentSet {
 		addAttribute(mergeSongResultsAttribute);
 		addAttribute(outputResultAttribute);
 		addAttribute(trainingDescriptionAttribute);
+	}
+	
+	/**
+	 * Parameters for unsupervised learning
+	 */
+	public ClassifierConfigSet( String inputSource,
+			String inputSourceType,
+			String attributesToIgnore,
+			String inputFeatures,
+			String inputFeatureType,
+			int classificationWindowSize,
+			int classificationWindowOverlap,
+			String algorithmId,
+			String relationshipType,
+			String labelType,
+			String methodType,
+			int mergeSongResults,
+			String outputResultPath) {
+		super(strDataSetName);
+		inputSourceAttribute = StringAttribute.createFromString(strInputSource, inputSource);
+		List <String> values = new ArrayList<String>();
+		values.add(inputSourceType);
+		inputSourceTypeAttribute = new NominalAttribute(strInputSourceType, getAllowedValues(), values);
+		inputFeaturesAttribute = StringAttribute.createFromString(strInputFeatures, inputFeatures);
+		List<String> inputFeatureTypeValues = new ArrayList<String>();
+		for(InputFeatureType type : InputFeatureType.values()) {
+			inputFeatureTypeValues.add(type.toString());
+		}
+		List<String> inputFeatureTypes = new ArrayList<String>();
+		inputFeatureTypes.add(inputFeatureType);
+		inputFeatureTypeAttribute = new NominalAttribute(strInputFeatureType, inputFeatureTypeValues, inputFeatureTypes);
+		classificationWindowSizeAttribute = NumericAttribute.createFromDouble(strClassificationWindowSize, classificationWindowSize);
+		classificationWindowOverlapAttribute = NumericAttribute.createFromDouble(strClassificationWindowOverlap, classificationWindowOverlap);
+		classificationAlgorithmIdAttribute = StringAttribute.createFromString(strTrainingAlgorithmID, algorithmId);
+		groundTruthCategoryIdAttribute = null;
+		attributesToPredictAttribute = null;
+		attributesToIgnoreAttribute = StringAttribute.createFromString(strAttributesToIgnore, attributesToIgnore);
+		List<String> relationshipTypeValues = new ArrayList<String>();
+		List<String> labelTypeValues = new ArrayList<String>();
+		List<String> methodTypeValues = new ArrayList<String>();
+		for(RelationshipType type : RelationshipType.values()) {
+			relationshipTypeValues.add(type.toString());
+		}
+		for(LabelType type : LabelType.values()) {
+			labelTypeValues.add(type.toString());
+		}
+		for(MethodType type : MethodType.values()) {
+			methodTypeValues.add(type.toString());
+		}
+		List <String> relationshipTypes = new ArrayList<String>();
+		relationshipTypes.add(relationshipType);
+		List<String> labelTypes = new ArrayList<String>();
+		labelTypes.add(labelType);
+		List<String> methodTypes = new ArrayList<String>();
+		methodTypes.add(methodType);
+		relationshipTypeAttribute = new NominalAttribute(strRelationshipType, relationshipTypeValues, relationshipTypes);
+		labelTypeAttribute = new NominalAttribute(strLabelType, labelTypeValues, labelTypes);
+		methodTypeAttribute = new NominalAttribute(strMethodType, methodTypeValues, methodTypes);
+		pathToInputModelAttribute = null;
+		mergeSongResultsAttribute = NumericAttribute.createFromDouble(strMergeSongResults, mergeSongResults);
+		outputResultAttribute = StringAttribute.createFromString(strOutputResult, outputResultPath);
+		trainingDescriptionAttribute = null;
+		
+		addAttribute(inputSourceAttribute);
+		addAttribute(inputSourceTypeAttribute);
+		addAttribute(attributesToIgnoreAttribute);
+		addAttribute(inputFeaturesAttribute);
+		addAttribute(inputFeatureTypeAttribute);
+		addAttribute(classificationWindowSizeAttribute);
+		addAttribute(classificationWindowOverlapAttribute);
+		addAttribute(classificationAlgorithmIdAttribute);
+		addAttribute(relationshipTypeAttribute);
+		addAttribute(labelTypeAttribute);
+		addAttribute(methodTypeAttribute);
+		addAttribute(mergeSongResultsAttribute);
+		addAttribute(outputResultAttribute);
 	}
 
 	public List<File> getInputFileLists() {

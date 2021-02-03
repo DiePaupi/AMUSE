@@ -60,6 +60,7 @@ import amuse.interfaces.nodes.NodeScheduler;
 import amuse.interfaces.nodes.TaskConfiguration;
 import amuse.interfaces.nodes.methods.AmuseTask;
 import amuse.nodes.classifier.ClassificationConfiguration.InputSourceType;
+import amuse.nodes.classifier.interfaces.ClassifierInterface;
 import amuse.nodes.classifier.interfaces.ClassifierSupervisedInterface;
 import amuse.nodes.classifier.interfaces.ClassifierUnsupervisedInterface;
 import amuse.nodes.processor.ProcessingConfiguration;
@@ -80,7 +81,9 @@ import amuse.util.AmuseLogger;
 public class ClassifierNodeScheduler extends NodeScheduler { 
 
 	/** Classifier adapter */
-	ClassifierSupervisedInterface cad = null;
+	ClassifierInterface commonInterface = null;
+	ClassifierSupervisedInterface cSinterface = null;
+	ClassifierUnsupervisedInterface cUinterface = null;
 	
 	/** Parameters for classification algorithm if required */
 	private String requiredParameters = null;
@@ -278,52 +281,58 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 				throw new NodeException("Regression classification isn't supported yet.");
 			}
 			
-			//Load attributes to ignore and classify
-			List<Integer> attributesToPredict = ((ClassificationConfiguration)this.taskConfiguration).getAttributesToPredict();
 			List<Integer> attributesToIgnore = ((ClassificationConfiguration)this.taskConfiguration).getAttributesToIgnore();
 			
-			//Load the categoryDescription if no model path is given
+			//?
 			DataSetAbstract categoryList = null;
 			try {
 				categoryList = new ArffDataSet(new File(AmusePreferences.getMultipleTracksAnnotationTablePath()));
 			} catch (IOException e) {
 				throw new NodeException("Could not load the category table: " + e.getMessage()); 
 			}
-			if(((ClassificationConfiguration)this.taskConfiguration).getPathToInputModel() == null
-					|| ((ClassificationConfiguration)this.taskConfiguration).getPathToInputModel().equals(new String("-1"))){
-				int i=0;
-				while(i < categoryList.getValueCount()) {
-					Integer id = new Double(categoryList.getAttribute("Id").getValueAt(i).toString()).intValue();
-					if(id == ((ClassificationConfiguration)this.taskConfiguration).getGroundTruthCategoryId()) {
-						this.categoryDescription = ((ClassificationConfiguration)this.taskConfiguration).getGroundTruthCategoryId() + 
-								"-" + categoryList.getAttribute("CategoryName").getValueAt(i).toString();
-					
-						DataSetAbstract groundTruth = null;
-						try {
-							groundTruth = new ArffDataSet(new File(categoryList.getAttribute("Path").getValueAt(i).toString()));
-						} catch(IOException e) {
-							throw new NodeException("Could not load the category table: " + e.getMessage()); 
-						}
-					
-					
-						this.categoryDescription += File.separator;
-						int j = 0;
-						for(int category : attributesToPredict) {
-							if(j!=0) {
-								this.categoryDescription += "_";
+			
+			//Load classify - needs probably to be changed if regression is implemented
+			if(((ClassificationConfiguration)this.taskConfiguration).getMethodType() == MethodType.SUPERVISED){
+				List<Integer> attributesToPredict = ((ClassificationConfiguration)this.taskConfiguration).getAttributesToPredict();
+				
+				//Load the categoryDescription if no model path is given
+				if(((ClassificationConfiguration)this.taskConfiguration).getPathToInputModel() == null
+						|| ((ClassificationConfiguration)this.taskConfiguration).getPathToInputModel().equals(new String("-1"))){
+					int i=0;
+					while(i < categoryList.getValueCount()) {
+						Integer id = new Double(categoryList.getAttribute("Id").getValueAt(i).toString()).intValue();
+						if(id == ((ClassificationConfiguration)this.taskConfiguration).getGroundTruthCategoryId()) {
+							this.categoryDescription = ((ClassificationConfiguration)this.taskConfiguration).getGroundTruthCategoryId() + 
+									"-" + categoryList.getAttribute("CategoryName").getValueAt(i).toString();
+						
+							DataSetAbstract groundTruth = null;
+							try {
+								groundTruth = new ArffDataSet(new File(categoryList.getAttribute("Path").getValueAt(i).toString()));
+							} catch(IOException e) {
+								throw new NodeException("Could not load the category table: " + e.getMessage()); 
 							}
-							this.categoryDescription += groundTruth.getAttribute(5 + category).getName();
-							j++;
+						
+						
+							this.categoryDescription += File.separator;
+							int j = 0;
+							for(int category : attributesToPredict) {
+								if(j!=0) {
+									this.categoryDescription += "_";
+								}
+								this.categoryDescription += groundTruth.getAttribute(5 + category).getName();
+								j++;
+							}
+							break;
 						}
-						break;
+						i++;
 					}
-					i++;
+					//If the category id could not be found and no model path is given, throw an exception
+					if(categoryDescription.equals("")) {
+						throw new NodeException("Category Id " + ((ClassificationConfiguration)this.taskConfiguration).getGroundTruthCategoryId() + " could not be found and no model path was given.");
+					}
 				}
-				//If the category id could not be found and no model path is given, throw an exception
-				if(categoryDescription.equals("")) {
-					throw new NodeException("Category Id " + ((ClassificationConfiguration)this.taskConfiguration).getGroundTruthCategoryId() + " could not be found and no model path was given.");
-				}
-			}
+			}// else if (it's unsupervised){there is nothing to do, I guess}
+			
 			
 			DataSet inputForClassification = null;
 		
@@ -407,7 +416,8 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 					
 					DataInputInterface inputToClassify = ((ClassificationConfiguration)this.taskConfiguration).getInputToClassify();
 					
-					if(((ClassificationConfiguration)this.taskConfiguration).getInputSourceType() == ClassificationConfiguration.InputSourceType.CATEGORY_ID) {
+					if( (((ClassificationConfiguration)this.taskConfiguration).getMethodType() == MethodType.SUPERVISED) &&
+							(((ClassificationConfiguration)this.taskConfiguration).getInputSourceType() == ClassificationConfiguration.InputSourceType.CATEGORY_ID)) {
 						// Search for the category file
 						Integer categoryId = new Integer(inputToClassify.toString());
 						for(int i=0;i<categoryList.getValueCount();i++) {
@@ -425,6 +435,8 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 								break;
 							}
 						}
+					} else {
+						//TODO: AMUSE logger info
 					}
 					
 					// Load the processed feature files for a given music file list
@@ -737,6 +749,8 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 	 */
 	private void configureClassificationMethod() throws NodeException {
 		Integer requiredAlgorithm; 
+		// Is it supervised or unsupervised - regression not included
+		boolean isSupervised = ((ClassificationConfiguration)taskConfiguration).getMethodType() == MethodType.SUPERVISED;
 
 		// If parameter string for this algorithm exists..
 		if(((ClassificationConfiguration)taskConfiguration).getAlgorithmDescription().contains("[") && 
@@ -841,7 +855,16 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 						}
 						
 						Class<?> adapter = Class.forName(currentInstance.stringValue(classifierAdapterClassAttribute));
-						this.cad = (ClassifierSupervisedInterface)adapter.newInstance();
+						
+						//TODO: Does this even work?
+						if (isSupervised) {
+							this.cSinterface = (ClassifierSupervisedInterface)adapter.newInstance();
+							commonInterface = this.cSinterface;
+						} else {
+							this.cUinterface = (ClassifierUnsupervisedInterface)adapter.newInstance();
+							commonInterface = this.cUinterface;
+						}
+						
 						Properties classifierProperties = new Properties();
 						Integer id = new Double(currentInstance.value(idAttribute)).intValue();
 						classifierProperties.setProperty("id",id.toString());
@@ -856,7 +879,8 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 						classifierProperties.setProperty("inputBaseBatch",currentInstance.stringValue(inputBaseClassificationBatchAttribute));
 						classifierProperties.setProperty("inputBatch",currentInstance.stringValue(inputClassificationBatchAttribute));
 						classifierProperties.setProperty("categoryDescription", this.categoryDescription);
-						((AmuseTask)this.cad).configure(classifierProperties,this,this.requiredParameters);
+						
+						((AmuseTask)this.commonInterface).configure(classifierProperties,this,this.requiredParameters);
 						
 						AmuseLogger.write(this.getClass().getName(), Level.INFO, 
 								"Classifier is configured: " + currentInstance.stringValue(classifierAdapterClassAttribute));
@@ -899,6 +923,17 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 	 * @throws NodeException
 	 */
 	private void classify() throws NodeException {
+		//
+		boolean isSupervised;
+		if (commonInterface instanceof ClassifierSupervisedInterface) {
+			isSupervised = true;
+		} else if (commonInterface instanceof ClassifierUnsupervisedInterface) {
+			isSupervised = false;
+		} else {
+			throw new NodeException("ClassifierNodeScheduler - classify: "
+					+ "Seems like Paupi couldn't figure out if you wanted supervised or unsupervised classification");
+		}
+				
 		try {
 			
 	    	// Check the folder for model file if it exists
@@ -929,27 +964,28 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 				parameterString += "]";
 			}
 	    	
-			// Find the classification model in the Amuse model database or set the path to a concrete
-			// model given in ClassificationConfiguration.pathToInputModel (for validator or optimizer)
-			String pathToModel = new String();
-			if(((ClassificationConfiguration)this.taskConfiguration).getPathToInputModel() == null
+			if (isSupervised) {
+				// Find the classification model in the Amuse model database or set the path to a concrete
+				// model given in ClassificationConfiguration.pathToInputModel (for validator or optimizer)
+				String pathToModel = new String();
+				if(((ClassificationConfiguration)this.taskConfiguration).getPathToInputModel() == null
 					|| ((ClassificationConfiguration)this.taskConfiguration).getPathToInputModel().equals(new String("-1"))) {
 				
-				String inputFeaturesDescription = ((ClassificationConfiguration)taskConfiguration).getInputFeatures();
+					String inputFeaturesDescription = ((ClassificationConfiguration)taskConfiguration).getInputFeatures();
 				
-				if(((ClassificationConfiguration)taskConfiguration).getInputFeatureType() == InputFeatureType.RAW_FEATURES) {
-					if(inputFeaturesDescription.contains(File.separator) && inputFeaturesDescription.contains(".")) {
-						inputFeaturesDescription = inputFeaturesDescription.substring(inputFeaturesDescription.lastIndexOf(File.separator) + 1, inputFeaturesDescription.lastIndexOf('.'));
+					if(((ClassificationConfiguration)taskConfiguration).getInputFeatureType() == InputFeatureType.RAW_FEATURES) {
+						if(inputFeaturesDescription.contains(File.separator) && inputFeaturesDescription.contains(".")) {
+							inputFeaturesDescription = inputFeaturesDescription.substring(inputFeaturesDescription.lastIndexOf(File.separator) + 1, inputFeaturesDescription.lastIndexOf('.'));
+						}
+						inputFeaturesDescription = "RAW_FEATURES_" + inputFeaturesDescription;
 					}
-					inputFeaturesDescription = "RAW_FEATURES_" + inputFeaturesDescription;
-				}
-				File folderForModels = new File(AmusePreferences.get(KeysStringValue.MODEL_DATABASE)
+					File folderForModels = new File(AmusePreferences.get(KeysStringValue.MODEL_DATABASE)
 						+ File.separator
 						+ this.categoryDescription
 						+ File.separator
-						+ ((AmuseTask)this.cad).getProperties().getProperty("id") 
+						+ ((AmuseTask)this.commonInterface).getProperties().getProperty("id") 
 						+ "-" 
-						+ ((AmuseTask)this.cad).getProperties().getProperty("name") 
+						+ ((AmuseTask)this.commonInterface).getProperties().getProperty("name") 
 						+ parameterString + "_"
 						+ ((ClassificationConfiguration)this.taskConfiguration).getRelationshipType().toString() + "_"
 						+ ((ClassificationConfiguration)this.taskConfiguration).getLabelType().toString() + "_"
@@ -957,22 +993,30 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 						+ File.separator
 						+ inputFeaturesDescription);
 				
-				String trainingDescription = ((ClassificationConfiguration)this.taskConfiguration).getTrainingDescription();
-				if(trainingDescription.equals("")) {
-					pathToModel = new String(folderForModels + File.separator + "model.mod");
+					String trainingDescription = ((ClassificationConfiguration)this.taskConfiguration).getTrainingDescription();
+					if(trainingDescription.equals("")) {
+						pathToModel = new String(folderForModels + File.separator + "model.mod");
+					} else {
+						pathToModel = new String(folderForModels + File.separator + "model_" + trainingDescription + ".mod");
+					}
+				
+					pathToModel = pathToModel.replaceAll(File.separator + "+", File.separator);
 				} else {
-					pathToModel = new String(folderForModels + File.separator + "model_" + trainingDescription + ".mod");
+					pathToModel = ((ClassificationConfiguration)this.taskConfiguration).getPathToInputModel();
 				}
 				
-				pathToModel = pathToModel.replaceAll(File.separator + "+", File.separator);
+				// CLASSIFY SUPERVISED
+				AmuseLogger.write(this.getClass().getName(), Level.INFO, "Starting the supervised classification with " + 
+						((AmuseTask)this.commonInterface).getProperties().getProperty("name") + "...");
+				this.cSinterface.classify(pathToModel);
 			} else {
-				pathToModel = ((ClassificationConfiguration)this.taskConfiguration).getPathToInputModel();
+				// CLASSIFY UNSUPERVISED
+				AmuseLogger.write(this.getClass().getName(), Level.INFO, "Starting the unsupervised classification with " + 
+						((AmuseTask)this.commonInterface).getProperties().getProperty("name") + "...");
+				this.cUinterface.classify();
 			}
-			// Classify
-			AmuseLogger.write(this.getClass().getName(), Level.INFO, "Starting the classification with " + 
-					((AmuseTask)this.cad).getProperties().getProperty("name") + "...");
-//TODO: Paupi - change classify for supervised and unsupervised			
-			this.cad.classify(pathToModel);
+			
+			
 			AmuseLogger.write(this.getClass().getName(), Level.INFO, "..classification finished!");
 			
 	    } catch(NodeException e) {

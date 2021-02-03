@@ -21,7 +21,7 @@
  * 
  * Creation date: 21.01.2008
  */
-package amuse.nodes.classifier.methods.supervised;
+package amuse.nodes.classifier.methods;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -56,6 +56,7 @@ import amuse.interfaces.nodes.methods.AmuseTask;
 import amuse.nodes.classifier.ClassifierNodeScheduler;
 import amuse.nodes.classifier.ClassificationConfiguration;
 import amuse.nodes.classifier.interfaces.ClassifierInterface;
+import amuse.nodes.classifier.interfaces.ClassifierSupervisedInterface;
 import amuse.util.FileOperations;
 import amuse.util.LibraryInitializer;
 
@@ -66,7 +67,7 @@ import amuse.util.LibraryInitializer;
  * @author Igor Vatolkin
  * @version $Id: RapidMinerModelLoader.java 208 2017-09-29 12:21:50Z frederik-h $
  */
-public class RapidMinerModelLoader extends AmuseTask implements ClassifierInterface {
+public class RapidMinerModelLoader extends AmuseTask implements ClassifierSupervisedInterface {
 	
 	/*
 	 * (non-Javadoc)
@@ -92,7 +93,7 @@ public class RapidMinerModelLoader extends AmuseTask implements ClassifierInterf
 	 * (non-Javadoc)
 	 * @see amuse.nodes.classifier.interfaces.ClassifierInterface#classify(java.lang.String, java.util.ArrayList, java.lang.String)
 	 */
-//TODO: Paupi - split (un)supervised classification
+//TODO: Paupi - split (un)supervised classification - Not needed, cause only supervised need the model loader?
 	public void classify(String pathToModelFile) throws NodeException {
 		
 		DataSet dataSetToClassify = ((DataSetInput)((ClassificationConfiguration)this.correspondingScheduler.
