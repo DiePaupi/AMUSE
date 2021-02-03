@@ -59,7 +59,9 @@ import amuse.interfaces.nodes.NodeException;
 import amuse.interfaces.nodes.NodeScheduler;
 import amuse.interfaces.nodes.TaskConfiguration;
 import amuse.interfaces.nodes.methods.AmuseTask;
-import amuse.nodes.classifier.interfaces.ClassifierInterface;
+import amuse.nodes.classifier.ClassificationConfiguration.InputSourceType;
+import amuse.nodes.classifier.interfaces.ClassifierSupervisedInterface;
+import amuse.nodes.classifier.interfaces.ClassifierUnsupervisedInterface;
 import amuse.nodes.processor.ProcessingConfiguration;
 import amuse.nodes.processor.ProcessorNodeScheduler;
 import amuse.nodes.trainer.TrainingConfiguration;
@@ -78,7 +80,7 @@ import amuse.util.AmuseLogger;
 public class ClassifierNodeScheduler extends NodeScheduler { 
 
 	/** Classifier adapter */
-	ClassifierInterface cad = null;
+	ClassifierSupervisedInterface cad = null;
 	
 	/** Parameters for classification algorithm if required */
 	private String requiredParameters = null;
@@ -272,8 +274,8 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 		if(! (((ClassificationConfiguration)this.getConfiguration()).getInputToClassify() instanceof DataSetInput)) {
 			
 			//Check if the settings are supported
-			if(((ClassificationConfiguration)this.taskConfiguration).getMethodType() != MethodType.SUPERVISED){
-				throw new NodeException("Currently only supervised classification is supported.");
+			if(((ClassificationConfiguration)this.taskConfiguration).getMethodType() == MethodType.REGRESSION){
+				throw new NodeException("Regression classification isn't supported yet.");
 			}
 			
 			//Load attributes to ignore and classify
@@ -839,7 +841,7 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 						}
 						
 						Class<?> adapter = Class.forName(currentInstance.stringValue(classifierAdapterClassAttribute));
-						this.cad = (ClassifierInterface)adapter.newInstance();
+						this.cad = (ClassifierSupervisedInterface)adapter.newInstance();
 						Properties classifierProperties = new Properties();
 						Integer id = new Double(currentInstance.value(idAttribute)).intValue();
 						classifierProperties.setProperty("id",id.toString());
@@ -969,6 +971,7 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 			// Classify
 			AmuseLogger.write(this.getClass().getName(), Level.INFO, "Starting the classification with " + 
 					((AmuseTask)this.cad).getProperties().getProperty("name") + "...");
+//TODO: Paupi - change classify for supervised and unsupervised			
 			this.cad.classify(pathToModel);
 			AmuseLogger.write(this.getClass().getName(), Level.INFO, "..classification finished!");
 			

@@ -37,9 +37,9 @@ import amuse.data.io.DataSetInput;
 import amuse.data.io.attributes.NumericAttribute;
 import amuse.interfaces.nodes.NodeException;
 import amuse.interfaces.nodes.methods.AmuseTask;
-import amuse.nodes.classifier.ClassificationConfiguration;
 import amuse.nodes.classifier.ClassifierNodeScheduler;
-import amuse.nodes.classifier.interfaces.ClassifierInterface;
+import amuse.nodes.classifier.ClassificationConfiguration;
+import amuse.nodes.classifier.interfaces.ClassifierSupervisedInterface;
 import amuse.util.AmuseLogger;
 
 /**
@@ -47,7 +47,7 @@ import amuse.util.AmuseLogger;
  * 
  * @author Philipp Ginsel
  */
-public class FKNNAdapter extends AmuseTask implements ClassifierInterface {
+public class FKNNAdapter extends AmuseTask implements ClassifierSupervisedInterface {
 
 	private int neighborNumber;
 	private int m;

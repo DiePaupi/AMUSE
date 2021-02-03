@@ -32,13 +32,13 @@ import amuse.data.ModelType.RelationshipType;
 import amuse.data.InputFeatureType;
 import amuse.data.ModelType.LabelType;
 import amuse.data.ModelType.MethodType;
-import amuse.nodes.classifier.ClassificationConfiguration.InputSourceType;
 import amuse.data.io.DataSetAbstract;
 import amuse.data.io.DataSetException;
 import amuse.data.io.attributes.NominalAttribute;
 import amuse.data.io.attributes.NumericAttribute;
 import amuse.data.io.attributes.StringAttribute;
 import amuse.interfaces.nodes.TaskConfiguration;
+import amuse.nodes.classifier.ClassificationConfiguration.InputSourceType;
 
 /**
  * This class represents a list of classification tasks as used in AMUSE. Serialisation to ARFF is supported.

@@ -47,7 +47,7 @@ import amuse.data.io.attributes.StringAttribute;
 import amuse.interfaces.nodes.NodeException;
 import amuse.interfaces.nodes.methods.AmuseTask;
 import amuse.nodes.classifier.ClassificationConfiguration;
-import amuse.nodes.classifier.interfaces.ClassifierInterface;
+import amuse.nodes.classifier.interfaces.ClassifierSupervisedInterface;
 import amuse.preferences.AmusePreferences;
 import amuse.preferences.KeysStringValue;
 import amuse.util.AmuseLogger;
@@ -59,7 +59,7 @@ import amuse.util.ExternalProcessBuilder;
  * @author Igor Vatolkin
  * @version $Id$
  */
-public class LinearDiscriminantAnalysisAdapter extends AmuseTask implements ClassifierInterface {
+public class LinearDiscriminantAnalysisAdapter extends AmuseTask implements ClassifierSupervisedInterface {
 
 	/*
 	 * (non-Javadoc)

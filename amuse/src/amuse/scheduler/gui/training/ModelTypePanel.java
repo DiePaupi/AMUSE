@@ -54,7 +54,7 @@ public class ModelTypePanel extends JPanel {
 		});
 		
 		
-		DefaultComboBoxModel methodModel = new DefaultComboBoxModel(new MethodType[] {MethodType.SUPERVISED});
+		DefaultComboBoxModel methodModel = new DefaultComboBoxModel(new MethodType[] {MethodType.SUPERVISED, MethodType.UNSUPERVISED});
 		methodComboBox.setModel(methodModel);
 		methodComboBox.setSelectedItem(MethodType.SUPERVISED);
 		methodComboBox.addActionListener(l -> {

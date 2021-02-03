@@ -44,16 +44,18 @@ import amuse.data.io.DataSetAbstract;
 import amuse.data.io.FileInput;
 import amuse.data.io.FileListInput;
 import amuse.interfaces.nodes.TaskConfiguration;
-import amuse.nodes.validator.ValidationConfiguration;
+import amuse.nodes.classifier.ClassificationConfiguration;
+//import amuse.nodes.classifier.ClassificationConfiguration.InputSourceType;
+//import amuse.nodes.validator.ValidationConfiguration;
 import amuse.preferences.AmusePreferences;
 import amuse.preferences.KeysStringValue;
 import amuse.util.AmuseLogger;
 
 /**
- * Describes the parameters for a classification task 
- * 
- * @author Igor Vatolkin
- * @version $Id: ClassificationConfiguration.java 243 2018-09-07 14:18:30Z frederik-h $
+ * Describes the parameters for a classification task, which will be specified within the non-abstract
+ * classes Supervised- and UnClassificationConfiguration
+ * @author Igor Vatolkin / Pauline Speckmann
+ *
  */
 public class ClassificationConfiguration extends TaskConfiguration {
 
@@ -128,20 +130,20 @@ public class ClassificationConfiguration extends TaskConfiguration {
 	
 
 	/**
-	 * Standard constructor
-	 * @param inputToClassify Input to classify
-	 * @param inputSourceType Defines the input source type
-	 * @param attributesToIgnore features of the processed feature files or the ready input that should not be used for the classification
-	 * @param inputFeatures Description of the input features
-	 * @param inputFeatureType type of the input features
-	 * @param classificationWindowSize size of the classification windows
-	 * @param classificationWindowOverlap overlap of the classification windows
-	 * @param algorithmDescription Id and parameters of the classification algorithm from classifierTable.arff
-	 * @param attributesToPredict the categories of the category file of the annotation database
-	 * @param classificationType is the classification unsupervised, binary, multilabel or multiclass?
-	 * @param fuzzy should the classification be fuzzy?
-	 * @param mergeSongResults Flag if song relationship grade should be averaged over all partitions (="1")
-	 * @param classificationOutput Destination for classification output
+	 * STANDARD supervised CONSTRUCTOR
+	 * 
+	 * @param inputToClassify				= Defines the input to classify
+	 * @param inputSourceType				= Defines the input source type
+	 * @param attributesToIgnore			= Defines the features of the processed feature files (or the ready input) which should not be used for the classification
+	 * @param inputFeatures					= Is a description of the input features
+	 * @param inputFeatureType				= Defines the type of the input features
+	 * @param classificationWindowSize		= Defines the size of the classification windows
+	 * @param classificationWindowOverlap	= Defines the overlap of the classification windows
+	 * @param algorithmDescription			= Id and parameters of the classification algorithm from classifierTable.arff
+	 * @param attributesToPredict			s= Defines the categories of the category file of the annotation database (supervised only)
+	 * @param modelType						= Defines the model type
+	 * @param mergeSongResults				= Flag if song relationship grade should be averaged over all partitions (="1")
+	 * @param classificationOutput			= Defines the destination for classification output
 	 */
 	public ClassificationConfiguration(
 			DataInputInterface inputToClassify,
@@ -155,52 +157,129 @@ public class ClassificationConfiguration extends TaskConfiguration {
 			List<Integer> attributesToPredict,
 			ModelType modelType,
 			Integer mergeSongResults,
-			String classificationOutput) {
+			String classificationOutput) throws IllegalStateException {
+		
 		this.inputToClassify = inputToClassify;
 		this.inputSourceType = inputSourceType;
 		this.inputFeatureType = inputFeatureType;
-		if(inputFeatureType == InputFeatureType.RAW_FEATURES) {
-			this.inputFeatureList = new FeatureTable(new File(inputFeatures));
-			List<Feature> features = inputFeatureList.getFeatures();
-			String description = "";
-			if(!features.isEmpty()) {
-				description += features.get(0).getId();
+			if(inputFeatureType == InputFeatureType.RAW_FEATURES) {
+				this.inputFeatureList = new FeatureTable(new File(inputFeatures));
+				List<Feature> features = inputFeatureList.getFeatures();
+				String description = "";
+				if(!features.isEmpty()) {
+					description += features.get(0).getId();
+				}
+				for(int i = 1; i < features.size(); i++) {
+					description += "_" + features.get(i).getId();
+				}
+				this.inputFeaturesDescription = description;
+			} else {
+				this.inputFeatureList = null;
+				this.inputFeaturesDescription = inputFeatures;
 			}
-			for(int i = 1; i < features.size(); i++) {
-				description += "_" + features.get(i).getId();
-			}
-			this.inputFeaturesDescription = description;
-		} else {
-			this.inputFeatureList = null;
-			this.inputFeaturesDescription = inputFeatures;
-		}
 		this.classificationWindowSize = classificationWindowSize;
 		this.classificationWindowOverlap = classificationWindowOverlap;
 		this.algorithmDescription = algorithmDescription;
-		this.attributesToPredict = attributesToPredict;
+		
 		this.attributesToIgnore = attributesToIgnore;
-		this.modelType = modelType;
 		this.mergeSongResults = mergeSongResults;
 		this.classificationOutput = classificationOutput;
-		this.groundTruthCategoryId = -1;
+		
+			if(modelType.getMethodType() == MethodType.SUPERVISED) {
+				this.modelType = modelType;
+				this.attributesToPredict = attributesToPredict;
+				this.groundTruthCategoryId = -1;
+			} else {
+				throw new IllegalStateException ("The standard constructor for supervised learning"
+						+ " within ClassificationConfiguration was used, but the method type wasn't supervised");
+			}
+		
 	}
 	
 	/**
-	 * Alternative constructor if the song list to classify is loaded by the category id or path to filelist
-	 * @param inputSourceType Defines the input source type
-	 * @param attributesToIgnore features of the processed feature files or the ready input that should not be used for the classification
-	 * @param inputSource Input for classification
-	 * @param inputFeatures Description of the input features
-	 * @param inputFeatureType type of the input features
-	 * @param classificationWindowSize size of the classification windows
-	 * @param classificationWindowOverlap overlap of the classification windows
-	 * @param algorithmDescription Id and parameters of the classification algorithm from classifierTable.arff
-	 * @param groundTruthSource Id of the music category
-	 * @param attributesToPredict the categories of the category file of the annotation database
-	 * @param classificationType is the classification unsupervised, binary, multilabel or multiclass?
-	 * @param fuzzy should the classification be fuzzy?
-	 * @param mergeSongResults Flag if song relationship grade should be averaged over all partitions (="1")
-	 * @param classificationOutput Destination for classification output
+	 * STANDARD UNsupervised CONSTRUCTOR
+	 * 
+	 * @param inputToClassify				= Defines the input to classify
+	 * @param inputSourceType				= Defines the input source type
+	 * @param attributesToIgnore			= Defines the features of the processed feature files (or the ready input) which should not be used for the classification
+	 * @param inputFeatures					= Is a description of the input features
+	 * @param inputFeatureType				= Defines the type of the input features
+	 * @param classificationWindowSize		= Defines the size of the classification windows
+	 * @param classificationWindowOverlap	= Defines the overlap of the classification windows
+	 * @param algorithmDescription			= Id and parameters of the classification algorithm from classifierTable.arff
+	 * @param modelType						= Defines the model type
+	 * @param mergeSongResults				= Flag if song relationship grade should be averaged over all partitions (="1")
+	 * @param classificationOutput			= Defines the destination for classification output
+	 */
+	public ClassificationConfiguration(
+			DataInputInterface inputToClassify,
+			InputSourceType inputSourceType,
+			List <Integer> attributesToIgnore,
+			String inputFeatures,
+			InputFeatureType inputFeatureType,
+			Integer classificationWindowSize,
+			Integer classificationWindowOverlap,
+			String algorithmDescription,
+			ModelType modelType,
+			Integer mergeSongResults,
+			String classificationOutput) throws IllegalStateException {
+		
+		this.inputToClassify = inputToClassify;
+		this.inputSourceType = inputSourceType;
+		this.inputFeatureType = inputFeatureType;
+			if(inputFeatureType == InputFeatureType.RAW_FEATURES) {
+				this.inputFeatureList = new FeatureTable(new File(inputFeatures));
+				List<Feature> features = inputFeatureList.getFeatures();
+				String description = "";
+				if(!features.isEmpty()) {
+					description += features.get(0).getId();
+				}
+				for(int i = 1; i < features.size(); i++) {
+					description += "_" + features.get(i).getId();
+				}
+				this.inputFeaturesDescription = description;
+			} else {
+				this.inputFeatureList = null;
+				this.inputFeaturesDescription = inputFeatures;
+			}
+		this.classificationWindowSize = classificationWindowSize;
+		this.classificationWindowOverlap = classificationWindowOverlap;
+		this.algorithmDescription = algorithmDescription;
+		this.attributesToIgnore = attributesToIgnore;
+		this.mergeSongResults = mergeSongResults;
+		this.classificationOutput = classificationOutput;
+		
+			if (modelType.getMethodType() == MethodType.UNSUPERVISED) {
+				this.modelType = modelType;
+				this.attributesToPredict = null;
+				this.groundTruthCategoryId = -2;
+			} else {
+				throw new IllegalStateException ("The standard constructor for unsupervised learning"
+						+ " within ClassificationConfiguration was used, but the method type wasn't unsupervised");
+			}
+	}
+	
+	
+	
+	/**
+	 * ALTERNATIVE supervised CONSTRUCTOR if the song list to classify is loaded by the category id or path to filelist
+	 * 
+	 * @param inputSourceType				= Defines the input source type
+	 * @param inputSource					= Defines the input for classification
+	 * @param attributesToIgnore			= Defines the features of the processed feature files (or the ready input) that should not be used for the classification
+	 * @param inputFeatures					= Description of the input features
+	 * @param inputFeatureType				= Defines the type of the input features
+	 * @param classificationWindowSize		= Defines the size of the classification windows
+	 * @param classificationWindowOverlap	= Defines the overlap of the classification windows
+	 * @param algorithmDescription			= Id and parameters of the classification algorithm from classifierTable.arff
+	 * @param groundTruthSource				s= Id of the music category
+	 * @param attributesToPredict			s= he categories of the category file of the annotation database
+	 * @param modelType						= Defines the model type (supervises, unsupervised, regression)
+	 * @param mergeSongResults				= Flag if song relationship grade should be averaged over all partitions (="1")
+	 * @param classificationOutput			= Destination for classification output
+	 * @param pathToInputModel				s= 
+	 * @param trainingDescription			s=
+	 * @throws IOException
 	 */
 	public ClassificationConfiguration(
 			InputSourceType inputSourceType,
@@ -217,80 +296,180 @@ public class ClassificationConfiguration extends TaskConfiguration {
 			Integer mergeSongResults,
 			String classificationOutput,
 			String pathToInputModel,
-			String trainingDescription) throws IOException{
+			String trainingDescription) throws IOException, IllegalStateException {
 		List<File> input;
 		List<Integer> ids = null;
 		
-		if(inputSourceType.equals(InputSourceType.CATEGORY_ID)) {
-			this.inputToClassify = new FileInput(inputSource);
-		} else if(inputSourceType.equals(InputSourceType.FILE_LIST)) {
-			DataSetAbstract inputFileSet; 
-			try {
-				inputFileSet = new ArffDataSet(new File(inputSource));
-			} catch(IOException e) {
-				throw new RuntimeException("Could not create ClassificationConfiguration: " + e.getMessage());
-			}
-			ids = new ArrayList<Integer>(inputFileSet.getValueCount());
-			input = new ArrayList<File>(inputFileSet.getValueCount());
-			for(int j=0;j<inputFileSet.getValueCount();j++) {
-				ids.add(new Double(inputFileSet.getAttribute("Id").getValueAt(j).toString()).intValue());
-				input.add(new File(inputFileSet.getAttribute("Path").getValueAt(j).toString()));
-			}
-			this.inputToClassify = new FileListInput(input,ids);
+			if(inputSourceType.equals(InputSourceType.CATEGORY_ID)) {
+				this.inputToClassify = new FileInput(inputSource);
+			} else if(inputSourceType.equals(InputSourceType.FILE_LIST)) {
+				DataSetAbstract inputFileSet; 
+				try {
+					inputFileSet = new ArffDataSet(new File(inputSource));
+				} catch(IOException e) {
+					throw new RuntimeException("Could not create ClassificationConfiguration: " + e.getMessage());
+				}
+				ids = new ArrayList<Integer>(inputFileSet.getValueCount());
+				input = new ArrayList<File>(inputFileSet.getValueCount());
+				for(int j=0;j<inputFileSet.getValueCount();j++) {
+					ids.add(new Double(inputFileSet.getAttribute("Id").getValueAt(j).toString()).intValue());
+					input.add(new File(inputFileSet.getAttribute("Path").getValueAt(j).toString()));
+				}
+				this.inputToClassify = new FileListInput(input,ids);
 			
-		} else {
-			input = new ArrayList<File>(1);
-			input.add(new File(inputSource));
-			this.inputToClassify = new FileListInput(input,ids);
-		}
+			} else {
+				input = new ArrayList<File>(1);
+				input.add(new File(inputSource));
+				this.inputToClassify = new FileListInput(input,ids);
+			}
+		
 		this.inputSourceType = inputSourceType;
 		this.inputFeatureType = inputFeatureType;
-		if(inputFeatureType == InputFeatureType.RAW_FEATURES) {
-			this.inputFeatureList = new FeatureTable(new File(inputFeatures));
-			List<Feature> features = inputFeatureList.getFeatures();
-			String description = "";
-			if(!features.isEmpty()) {
-				description += features.get(0).getId();
+			if(inputFeatureType == InputFeatureType.RAW_FEATURES) {
+				this.inputFeatureList = new FeatureTable(new File(inputFeatures));
+				List<Feature> features = inputFeatureList.getFeatures();
+				String description = "";
+				if(!features.isEmpty()) {
+					description += features.get(0).getId();
+				}
+				for(int i = 1; i < features.size(); i++) {
+					description += "_" + features.get(i).getId();
+				}
+				this.inputFeaturesDescription = description;
+			} else {
+				this.inputFeatureList = null;
+				this.inputFeaturesDescription = inputFeatures;
 			}
-			for(int i = 1; i < features.size(); i++) {
-				description += "_" + features.get(i).getId();
-			}
-			this.inputFeaturesDescription = description;
-		} else {
-			this.inputFeatureList = null;
-			this.inputFeaturesDescription = inputFeatures;
-		}
 		this.classificationWindowSize = classificationWindowSize;
 		this.classificationWindowOverlap = classificationWindowOverlap;
 		this.algorithmDescription = algorithmDescription;
-		this.groundTruthCategoryId = groundTruthSource;
-		this.attributesToPredict = attributesToPredict;
 		this.attributesToIgnore = attributesToIgnore;
-		this.modelType = modelType;
 		this.mergeSongResults = mergeSongResults;
 		this.classificationOutput = classificationOutput;
 		this.processedFeatureDatabase = AmusePreferences.get(KeysStringValue.PROCESSED_FEATURE_DATABASE);
-		this.pathToInputModel = pathToInputModel;
-		this.trainingDescription = trainingDescription;
+		
+			if(modelType.getMethodType() == MethodType.SUPERVISED) {
+				this.modelType = modelType;
+				this.attributesToPredict = attributesToPredict;
+				this.groundTruthCategoryId = groundTruthSource;
+				this.pathToInputModel = pathToInputModel;
+				this.trainingDescription = trainingDescription;
+			} else {
+				throw new IllegalStateException ("The alternative constructor for supervised learning"
+						+ " within ClassificationConfiguration was used, but the method type wasn't supervised");
+			}
+	}
+	
+	
+	/**
+	 * ALTERNATIVE UNsupervised CONSTRUCTOR if the song list to classify is loaded by the category id or path to filelist
+	 * 
+	 * @param inputSourceType				= Defines the input source type
+	 * @param inputSource					= Defines the input for classification
+	 * @param attributesToIgnore			= Defines the features of the processed feature files (or the ready input) that should not be used for the classification
+	 * @param inputFeatures					= Description of the input features
+	 * @param inputFeatureType				= Defines the type of the input features
+	 * @param classificationWindowSize		= Defines the size of the classification windows
+	 * @param classificationWindowOverlap	= Defines the overlap of the classification windows
+	 * @param algorithmDescription			= Id and parameters of the classification algorithm from classifierTable.arff
+	 * @param modelType						= Defines the model type (supervises, unsupervised, regression)
+	 * @param mergeSongResults				= Flag if song relationship grade should be averaged over all partitions (="1")
+	 * @param classificationOutput			= Destination for classification output
+	 * @throws IOException
+	 */
+	public ClassificationConfiguration(
+			InputSourceType inputSourceType,
+			String inputSource,
+			List <Integer> attributesToIgnore,
+			String inputFeatures,
+			InputFeatureType inputFeatureType,
+			Integer classificationWindowSize,
+			Integer classificationWindowOverlap,
+			String algorithmDescription,
+			ModelType modelType,
+			Integer mergeSongResults,
+			String classificationOutput) throws IOException, IllegalStateException {
+		List<File> input;
+		List<Integer> ids = null;
+		
+			if(inputSourceType.equals(InputSourceType.CATEGORY_ID)) {
+				this.inputToClassify = new FileInput(inputSource);
+			} else if(inputSourceType.equals(InputSourceType.FILE_LIST)) {
+				DataSetAbstract inputFileSet; 
+				try {
+					inputFileSet = new ArffDataSet(new File(inputSource));
+				} catch(IOException e) {
+					throw new RuntimeException("Could not create ClassificationConfiguration: " + e.getMessage());
+				}
+				ids = new ArrayList<Integer>(inputFileSet.getValueCount());
+				input = new ArrayList<File>(inputFileSet.getValueCount());
+				for(int j=0;j<inputFileSet.getValueCount();j++) {
+					ids.add(new Double(inputFileSet.getAttribute("Id").getValueAt(j).toString()).intValue());
+					input.add(new File(inputFileSet.getAttribute("Path").getValueAt(j).toString()));
+				}
+				this.inputToClassify = new FileListInput(input,ids);
+			
+			} else {
+				input = new ArrayList<File>(1);
+				input.add(new File(inputSource));
+				this.inputToClassify = new FileListInput(input,ids);
+			}
+		
+		this.inputSourceType = inputSourceType;
+		this.inputFeatureType = inputFeatureType;
+			if(inputFeatureType == InputFeatureType.RAW_FEATURES) {
+				this.inputFeatureList = new FeatureTable(new File(inputFeatures));
+				List<Feature> features = inputFeatureList.getFeatures();
+				String description = "";
+				if(!features.isEmpty()) {
+					description += features.get(0).getId();
+				}
+				for(int i = 1; i < features.size(); i++) {
+					description += "_" + features.get(i).getId();
+				}
+				this.inputFeaturesDescription = description;
+			} else {
+				this.inputFeatureList = null;
+				this.inputFeaturesDescription = inputFeatures;
+			}
+		this.classificationWindowSize = classificationWindowSize;
+		this.classificationWindowOverlap = classificationWindowOverlap;
+		this.algorithmDescription = algorithmDescription;
+		this.attributesToIgnore = attributesToIgnore;
+		this.mergeSongResults = mergeSongResults;
+		this.classificationOutput = classificationOutput;
+		this.processedFeatureDatabase = AmusePreferences.get(KeysStringValue.PROCESSED_FEATURE_DATABASE);
+		
+			if(modelType.getMethodType() == MethodType.UNSUPERVISED) {
+				this.modelType = modelType;
+				this.attributesToPredict = null;
+				this.groundTruthCategoryId = -2;
+			} else {
+				throw new IllegalStateException ("The alternative constructor for unsupervised learning"
+						+ " within ClassificationConfiguration was used, but the method type wasn't unsupervised");
+			}
 	}
 
+	
 	/**
-	 * Alternative constructor if the song list to classify is loaded by the category id or path to filelist
-	 * input features are given as FeatureTalbe (only used for raw input features)
-	 * @param inputSourceType Defines the input source type
-	 * @param attributesToIgnore features of the processed feature files or the ready input that should not be used for the classification
-	 * @param inputSource Input for classification
-	 * @param inputFeatures Description of the input features
-	 * @param inputFeatureType type of the input features
-	 * @param classificationWindowSize size of the classification windows
-	 * @param classificationWindowOverlap overlap of the classification windows
-	 * @param algorithmDescription Id and parameters of the classification algorithm from classifierTable.arff
-	 * @param groundTruthSource Id of the music category
-	 * @param attributesToPredict the categories of the category file of the annotation database
-	 * @param classificationType is the classification unsupervised, binary, multilabel or multiclass?
-	 * @param fuzzy should the classification be fuzzy?
-	 * @param mergeSongResults Flag if song relationship grade should be averaged over all partitions (="1")
-	 * @param classificationOutput Destination for classification output
+	 * ALTERNATIVE ALTERNATIVE supervised CONSTRUCTOR if the song list to classify is loaded by the category id or path to filelist
+	 * -> input features are given as FeatureTalbe (only used for raw input features)
+	 * 
+	 * @param inputSourceType				= Defines the input source type
+	 * @param inputSource					= Input for classification
+	 * @param attributesToIgnore			= features of the processed feature files or the ready input that should not be used for the classification
+	 * @param inputFeatures					= Description of the input features
+	 * @param classificationWindowSize		= size of the classification windows
+	 * @param classificationWindowOverlap	= overlap of the classification windows
+	 * @param algorithmDescription			= Id and parameters of the classification algorithm from classifierTable.arff
+	 * @param groundTruthSource				s= Id of the music category
+	 * @param attributesToPredict			s= the categories of the category file of the annotation database
+	 * @param modelType
+	 * @param mergeSongResults				= Flag if song relationship grade should be averaged over all partitions (="1")
+	 * @param classificationOutput			= Destination for classification output
+	 * @param pathToInputModel				s=
+	 * @param trainingDescription			s=
+	 * @throws IOException
 	 */
 	public ClassificationConfiguration(
 			InputSourceType inputSourceType,
@@ -306,57 +485,146 @@ public class ClassificationConfiguration extends TaskConfiguration {
 			Integer mergeSongResults,
 			String classificationOutput,
 			String pathToInputModel,
-			String trainingDescription) throws IOException{
+			String trainingDescription) throws IOException, IllegalStateException {
 		List<File> input;
 		List<Integer> ids = null;
 		
-		if(inputSourceType.equals(InputSourceType.CATEGORY_ID)) {
-			this.inputToClassify = new FileInput(inputSource);
-		} else if(inputSourceType.equals(InputSourceType.FILE_LIST)) {
-			DataSetAbstract inputFileSet; 
-			try {
-				inputFileSet = new ArffDataSet(new File(inputSource));
-			} catch(IOException e) {
-				throw new RuntimeException("Could not create ClassificationConfiguration: " + e.getMessage());
-			}
-			ids = new ArrayList<Integer>(inputFileSet.getValueCount());
-			input = new ArrayList<File>(inputFileSet.getValueCount());
-			for(int j=0;j<inputFileSet.getValueCount();j++) {
-				ids.add(new Double(inputFileSet.getAttribute("Id").getValueAt(j).toString()).intValue());
-				input.add(new File(inputFileSet.getAttribute("Path").getValueAt(j).toString()));
-			}
-			this.inputToClassify = new FileListInput(input,ids);
+			if(inputSourceType.equals(InputSourceType.CATEGORY_ID)) {
+				this.inputToClassify = new FileInput(inputSource);
+			} else if(inputSourceType.equals(InputSourceType.FILE_LIST)) {
+				DataSetAbstract inputFileSet; 
+				try {
+					inputFileSet = new ArffDataSet(new File(inputSource));
+				} catch(IOException e) {
+					throw new RuntimeException("Could not create ClassificationConfiguration: " + e.getMessage());
+				}
+				ids = new ArrayList<Integer>(inputFileSet.getValueCount());
+				input = new ArrayList<File>(inputFileSet.getValueCount());
+				for(int j=0;j<inputFileSet.getValueCount();j++) {
+					ids.add(new Double(inputFileSet.getAttribute("Id").getValueAt(j).toString()).intValue());
+					input.add(new File(inputFileSet.getAttribute("Path").getValueAt(j).toString()));
+				}
+				this.inputToClassify = new FileListInput(input,ids);
 			
-		} else {
-			input = new ArrayList<File>(1);
-			input.add(new File(inputSource));
-			this.inputToClassify = new FileListInput(input,ids);
-		}
+			} else {
+				input = new ArrayList<File>(1);
+				input.add(new File(inputSource));
+				this.inputToClassify = new FileListInput(input,ids);
+			}
 		this.inputSourceType = inputSourceType;
 		this.inputFeatureType = InputFeatureType.RAW_FEATURES;
 		this.inputFeatureList = inputFeatures;
 		List<Feature> features = inputFeatures.getFeatures();
 		String description = "";
-		if(!features.isEmpty()) {
-			description += features.get(0).getId();
-		}
-		for(int i = 1; i < features.size(); i++) {
-			description += "_" + features.get(i).getId();
-		}
+			if(!features.isEmpty()) {
+				description += features.get(0).getId();
+			}
+			for(int i = 1; i < features.size(); i++) {
+				description += "_" + features.get(i).getId();
+			}
 		this.inputFeaturesDescription = description;
 		this.classificationWindowSize = classificationWindowSize;
 		this.classificationWindowOverlap = classificationWindowOverlap;
 		this.algorithmDescription = algorithmDescription;
-		this.groundTruthCategoryId = groundTruthSource;
-		this.attributesToPredict = attributesToPredict;
 		this.attributesToIgnore = attributesToIgnore;
-		this.modelType = modelType;
 		this.mergeSongResults = mergeSongResults;
 		this.classificationOutput = classificationOutput;
 		this.processedFeatureDatabase = AmusePreferences.get(KeysStringValue.PROCESSED_FEATURE_DATABASE);
-		this.pathToInputModel = pathToInputModel;
-		this.trainingDescription = trainingDescription;
+		
+		if(modelType.getMethodType() == MethodType.SUPERVISED) {
+			this.modelType = modelType;
+			this.groundTruthCategoryId = groundTruthSource;
+			this.attributesToPredict = attributesToPredict;
+			this.pathToInputModel = pathToInputModel;
+			this.trainingDescription = trainingDescription;
+		} else {
+			throw new IllegalStateException ("The alternative alternative constructor for supervised learning"
+					+ " within ClassificationConfiguration was used, but the method type wasn't supervised");
+		}
 	}
+	
+	/**
+	 * ALTERNATIVE ALTERNATIVE UNsupervised CONSTRUCTOR if the song list to classify is loaded by the category id or path to filelist
+	 * -> input features are given as FeatureTalbe (only used for raw input features)
+	 * 
+	 * @param inputSourceType				= Defines the input source type
+	 * @param inputSource					= Input for classification
+	 * @param attributesToIgnore			= features of the processed feature files or the ready input that should not be used for the classification
+	 * @param inputFeatures					= Description of the input features
+	 * @param classificationWindowSize		= size of the classification windows
+	 * @param classificationWindowOverlap	= overlap of the classification windows
+	 * @param algorithmDescription			= Id and parameters of the classification algorithm from classifierTable.arff
+	 * @param modelType
+	 * @param mergeSongResults				= Flag if song relationship grade should be averaged over all partitions (="1")
+	 * @param classificationOutput			= Destination for classification output
+	 * @throws IOException
+	 */
+	public ClassificationConfiguration(
+			InputSourceType inputSourceType,
+			String inputSource,
+			List <Integer> attributesToIgnore,
+			FeatureTable inputFeatures,
+			Integer classificationWindowSize,
+			Integer classificationWindowOverlap,
+			String algorithmDescription,
+			ModelType modelType,
+			Integer mergeSongResults,
+			String classificationOutput) throws IOException, IllegalStateException {
+		List<File> input;
+		List<Integer> ids = null;
+		
+			if(inputSourceType.equals(InputSourceType.CATEGORY_ID)) {
+				this.inputToClassify = new FileInput(inputSource);
+			} else if(inputSourceType.equals(InputSourceType.FILE_LIST)) {
+				DataSetAbstract inputFileSet; 
+				try {
+					inputFileSet = new ArffDataSet(new File(inputSource));
+				} catch(IOException e) {
+					throw new RuntimeException("Could not create ClassificationConfiguration: " + e.getMessage());
+				}
+				ids = new ArrayList<Integer>(inputFileSet.getValueCount());
+				input = new ArrayList<File>(inputFileSet.getValueCount());
+				for(int j=0;j<inputFileSet.getValueCount();j++) {
+					ids.add(new Double(inputFileSet.getAttribute("Id").getValueAt(j).toString()).intValue());
+					input.add(new File(inputFileSet.getAttribute("Path").getValueAt(j).toString()));
+				}
+				this.inputToClassify = new FileListInput(input,ids);
+			
+			} else {
+				input = new ArrayList<File>(1);
+				input.add(new File(inputSource));
+				this.inputToClassify = new FileListInput(input,ids);
+			}
+		this.inputSourceType = inputSourceType;
+		this.inputFeatureType = InputFeatureType.RAW_FEATURES;
+		this.inputFeatureList = inputFeatures;
+		List<Feature> features = inputFeatures.getFeatures();
+		String description = "";
+			if(!features.isEmpty()) {
+				description += features.get(0).getId();
+			}
+			for(int i = 1; i < features.size(); i++) {
+				description += "_" + features.get(i).getId();
+			}
+		this.inputFeaturesDescription = description;
+		this.classificationWindowSize = classificationWindowSize;
+		this.classificationWindowOverlap = classificationWindowOverlap;
+		this.algorithmDescription = algorithmDescription;
+		this.attributesToIgnore = attributesToIgnore;
+		this.mergeSongResults = mergeSongResults;
+		this.classificationOutput = classificationOutput;
+		this.processedFeatureDatabase = AmusePreferences.get(KeysStringValue.PROCESSED_FEATURE_DATABASE);
+		
+		if(modelType.getMethodType() == MethodType.UNSUPERVISED) {
+			this.modelType = modelType;
+			this.attributesToPredict = null;
+			this.groundTruthCategoryId = -2;
+		} else {
+			throw new IllegalStateException ("The alternative alternative constructor for unsupervised learning"
+					+ " within ClassificationConfiguration was used, but the method type wasn't unsupervised");
+		}
+	}
+	
 
 	/**
 	 * Returns an array of ClassificationConfigurations from the given data set

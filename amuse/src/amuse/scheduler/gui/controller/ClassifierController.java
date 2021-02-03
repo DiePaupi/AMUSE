@@ -272,6 +272,7 @@ public class ClassifierController extends AbstractController {
             if(inputFeatureType == InputFeatureType.RAW_FEATURES) {
             	FeatureTable inputFeatures = classifierView.getInputFeatures();
             	// Save Files and Features:
+ //TODO: Paupi - edit for (un)supervised
 	            conf = new ClassificationConfiguration(
 	            		InputSourceType.valueOf(inputSourceType),
 	            		inputSource,

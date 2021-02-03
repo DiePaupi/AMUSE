@@ -33,12 +33,4 @@ import amuse.interfaces.nodes.NodeException;
  */
 public interface ClassifierInterface {
 	
-	/**
-	 * Classifies the music data from ClassificationConfiguration of the corresponding scheduler.
-	 * Labels are written directly to this data set
-	 * @param pathToModelFile Path to classification model file
-	 * @throws NodeException
-	 */
-	public void classify(String pathToModelFile) throws NodeException;
-	
 }

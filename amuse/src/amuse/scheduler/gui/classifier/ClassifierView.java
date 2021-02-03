@@ -108,7 +108,7 @@ public class ClassifierView extends JPanel implements HasCaption, NextButtonUsab
         splitPane.add(new JScrollPane(rightSide), JSplitPane.RIGHT);
         this.inputFeaturePanel = new InputFeaturePanel();
         this.inputSelectionPanel = new ClassificationInputSelectionPanel();
-        this.groundTruthSelectionPanel = new ClassificationGroundTruthSelectionPanel();
+        //this.groundTruthSelectionPanel = new ClassificationGroundTruthSelectionPanel();
         viewLeft.add(inputSelectionPanel, "growx, span, wrap");
         viewLeft.add(groundTruthSelectionPanel, "growx, span, wrap");
         
