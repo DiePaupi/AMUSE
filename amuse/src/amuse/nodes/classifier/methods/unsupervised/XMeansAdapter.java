@@ -6,23 +6,30 @@ import amuse.data.io.DataSetInput;
 import amuse.interfaces.nodes.NodeException;
 import amuse.interfaces.nodes.methods.AmuseTask;
 import amuse.nodes.classifier.ClassificationConfiguration;
+import amuse.nodes.classifier.ClassifierNodeScheduler;
 import amuse.nodes.classifier.interfaces.ClassifierUnsupervisedInterface;
 import amuse.preferences.AmusePreferences;
 import amuse.preferences.KeysStringValue;
+import amuse.util.AmuseLogger;
 import amuse.util.FileOperations;
 import amuse.util.LibraryInitializer;
 import com.rapidminer.Process;
 import com.rapidminer.example.ExampleSet;
+import com.rapidminer.example.set.AbstractExampleSet;
 import com.rapidminer.operator.IOContainer;
+import com.rapidminer.operator.IOObject;
 import com.rapidminer.operator.Operator;
 import com.rapidminer.operator.clustering.clusterer.XMeans;
 import com.rapidminer.operator.io.RepositoryStorer;
+import com.rapidminer.operator.io.ResultWriter;
 import com.rapidminer.operator.ports.InputPort;
 import com.rapidminer.operator.ports.OutputPort;
 import com.rapidminer.tools.OperatorService;
 
 import java.io.File;
 import java.util.StringTokenizer;
+
+import org.apache.log4j.Level;
 
 /**
  * Clusters given data by using the x-means clustering method via RapidMiner
@@ -98,43 +105,47 @@ public class XMeansAdapter extends AmuseTask implements ClassifierUnsupervisedIn
             Process process = new Process();
 
                 // Create the XMeans Operator in RM
-                Operator modelLearner = OperatorService.createOperator(XMeans.class);
+                Operator clusterer = OperatorService.createOperator(XMeans.class);
 
-                // Set the parameters like in the constructor
-                    //TODO: Are all of those parameters correct?
-                modelLearner.setParameter("k_min", new Integer(k_min).toString());
-                modelLearner.setParameter("k_max", new Integer(k_max).toString());
-                modelLearner.setParameter("numericalMeasure", this.numericalMeasure);
-                modelLearner.setParameter("max_runs", new Integer(max_runs).toString());
-                modelLearner.setParameter("max_optimization_steps", new Integer(max_opt_steps).toString());
-                modelLearner.setParameter("measureType", this.measureType);
-                modelLearner.setParameter("clusteringAlgorithm", this.clusteringAlgorithm);
-                process.getRootOperator().getSubprocess(0).addOperator(modelLearner);
+                // Set the parameters and add the clustering to the process
+                clusterer.setParameter("k_min", new Integer(k_min).toString());
+                clusterer.setParameter("k_max", new Integer(k_max).toString());
+                //clusterer.setParameter("numericalMeasure", this.numericalMeasure);
+                clusterer.setParameter("max_runs", new Integer(max_runs).toString());
+                clusterer.setParameter("max_optimization_steps", new Integer(max_opt_steps).toString());
+                //clusterer.setParameter("measureType", this.measureType);
+                //clusterer.setParameter("clusteringAlgorithm", this.clusteringAlgorithm);
+                process.getRootOperator().getSubprocess(0).addOperator(clusterer);
+                //AmuseLogger.write("XMeansAdapter", Level.DEBUG, "Clusterer prameters were set, XMeans was added to the process");
 
-                // Write the cluster model
-                    //TODO: is "/cluster_Model" ok?
-                RepositoryStorer modelWriter = OperatorService.createOperator(RepositoryStorer.class);
-                modelWriter.setParameter(RepositoryStorer.PARAMETER_REPOSITORY_ENTRY, "//" + LibraryInitializer.RAPIDMINER_REPO_NAME + "/cluster_model");
-                process.getRootOperator().getSubprocess(0).addOperator(modelWriter);
+                // Add writing the culstering result to the process
+                //ResultWriter resWriter = OperatorService.createOperator(ResultWriter.class);
+//TODO kann mand en Paramter so setzen?                
+                //resWriter.setParameter(ResultWriter.PARAMETER_RESULT_FILE , "//" + LibraryInitializer.RAPIDMINER_REPO_NAME + "/clustered_set");
+                //process.getRootOperator().getSubprocess(0).addOperator(resWriter);
+                //AmuseLogger.write("XMeansAdapter", Level.DEBUG, "ResultWriter was added to the process");
 
                 // Connect the ports so RapidMiner knows whats up
-                InputPort modelLearnerInputPort = modelLearner.getInputPorts().getPortByName("example set");
-                    //TODO: return the "cluster model" or the "clustered set"?
-                OutputPort modelLearnerOutputPort = modelLearner.getOutputPorts().getPortByName("cluster model");
-                    //TODO: the writer expects an example set as input, is this a problem here?
-                InputPort modelWriterInputPort = modelWriter.getInputPorts().getPortByName("input");
+                InputPort clustererInputPort = clusterer.getInputPorts().getPortByName("example set");
+                	// Return the the "clustered set" and not the "cluster model"
+                OutputPort clustererOutputPort = clusterer.getOutputPorts().getPortByName("clustered set");
+                //InputPort resWriterInputPort = resWriter.getInputPorts().getPortByName("input");
                 OutputPort processOutputPort = process.getRootOperator().getSubprocess(0).getInnerSources().getPortByIndex(0);
+//TODO braucht man den processInputPort irgendwie?
+                //clustererOutputPort.connectTo(resWriterInputPort);
+                processOutputPort.connectTo(clustererInputPort);
+                AmuseLogger.write("XMeansAdapter", Level.DEBUG, "Ports were connected");
 
-                modelLearnerOutputPort.connectTo(modelWriterInputPort);
-                processOutputPort.connectTo(modelLearnerInputPort);
+            // Run the RapidMiner-Process - XMeans needs an ExampleSet so it's being converted here
+            ExampleSet exampleSet = dataSetToClassify.convertToRapidMinerExampleSet();
+            //IOContainer result = process.run(new IOContainer(exampleSet));
+            process.run(new IOContainer(exampleSet));
+            AmuseLogger.write("XMeansAdapter", Level.DEBUG, "RapidMiner XMeans finished successfully");
 
-                // Run the RapidMiner-Process - XMeans needs an ExampleSet so it's being converted here
-                process.run(new IOContainer(dataSetToClassify.convertToRapidMinerExampleSet()));
-
-            // Copy results to the result database
-                //TODO: Do I need to convert the result file to something readable? What is it even?
-            String outputPath = AmusePreferences.get(KeysStringValue.AMUSE_PATH) + File.separator + "experiments" + File.separator + "XMeans_Result";
-            FileOperations.copy(new File(LibraryInitializer.REPOSITORY_PATH + File.separator + "cluster_model.ioo"), new File(outputPath));
+         	// Copy results to the result database
+         	String outputPath = AmusePreferences.get(KeysStringValue.AMUSE_PATH) + File.separator + "experiments" + File.separator + "XMeans_Result";
+         	FileOperations.copy(new File(LibraryInitializer.REPOSITORY_PATH + File.separator + "clustered_set"), new File(outputPath));
+         	AmuseLogger.write("XMeansAdapter", Level.DEBUG, "XMeans Results were copied to experiments");
 
         } catch(Exception e) {
             throw new NodeException("Error clustering data: " + e.getMessage());
