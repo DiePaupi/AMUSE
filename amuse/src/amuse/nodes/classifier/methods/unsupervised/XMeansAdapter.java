@@ -119,26 +119,29 @@ public class XMeansAdapter extends AmuseTask implements ClassifierUnsupervisedIn
                 //AmuseLogger.write("XMeansAdapter", Level.DEBUG, "Clusterer prameters were set, XMeans was added to the process");
 
                 // Add writing the culstering result to the process
-                //ResultWriter resWriter = OperatorService.createOperator(ResultWriter.class);
+                ResultWriter resWriter = OperatorService.createOperator(ResultWriter.class);
 //TODO kann mand en Paramter so setzen?                
-                //resWriter.setParameter(ResultWriter.PARAMETER_RESULT_FILE , "//" + LibraryInitializer.RAPIDMINER_REPO_NAME + "/clustered_set");
-                //process.getRootOperator().getSubprocess(0).addOperator(resWriter);
-                //AmuseLogger.write("XMeansAdapter", Level.DEBUG, "ResultWriter was added to the process");
+                resWriter.setParameter(ResultWriter.PARAMETER_RESULT_FILE , "//" + LibraryInitializer.RAPIDMINER_REPO_NAME + "/clustered_set");
+                process.getRootOperator().getSubprocess(0).addOperator(resWriter);
+                AmuseLogger.write("XMeansAdapter", Level.DEBUG, "ResultWriter was added to the process");
 
                 // Connect the ports so RapidMiner knows whats up
                 InputPort clustererInputPort = clusterer.getInputPorts().getPortByName("example set");
                 	// Return the the "clustered set" and not the "cluster model"
                 OutputPort clustererOutputPort = clusterer.getOutputPorts().getPortByName("clustered set");
-                //InputPort resWriterInputPort = resWriter.getInputPorts().getPortByName("input");
+                InputPort resWriterInputPort = resWriter.getInputPorts().getPortByName("input");
+                InputPort processInputPort = process.getRootOperator().getSubprocess(0).getInnerSinks().getPortByIndex(0);
                 OutputPort processOutputPort = process.getRootOperator().getSubprocess(0).getInnerSources().getPortByIndex(0);
-//TODO braucht man den processInputPort irgendwie?
-                //clustererOutputPort.connectTo(resWriterInputPort);
+
                 processOutputPort.connectTo(clustererInputPort);
+                clustererOutputPort.connectTo(resWriterInputPort);
+                clustererOutputPort.connectTo(processInputPort);
+                
                 AmuseLogger.write("XMeansAdapter", Level.DEBUG, "Ports were connected");
 
             // Run the RapidMiner-Process - XMeans needs an ExampleSet so it's being converted here
             ExampleSet exampleSet = dataSetToClassify.convertToRapidMinerExampleSet();
-            //IOContainer result = process.run(new IOContainer(exampleSet));
+                //IOContainer result = process.run(new IOContainer(exampleSet));
             process.run(new IOContainer(exampleSet));
             AmuseLogger.write("XMeansAdapter", Level.DEBUG, "RapidMiner XMeans finished successfully");
 
