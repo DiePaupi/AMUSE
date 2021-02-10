@@ -93,7 +93,6 @@ public class RapidMinerModelLoader extends AmuseTask implements ClassifierSuperv
 	 * (non-Javadoc)
 	 * @see amuse.nodes.classifier.interfaces.ClassifierInterface#classify(java.lang.String, java.util.ArrayList, java.lang.String)
 	 */
-//TODO: Paupi - split (un)supervised classification - Not needed, cause only supervised need the model loader?
 	public void classify(String pathToModelFile) throws NodeException {
 		
 		DataSet dataSetToClassify = ((DataSetInput)((ClassificationConfiguration)this.correspondingScheduler.

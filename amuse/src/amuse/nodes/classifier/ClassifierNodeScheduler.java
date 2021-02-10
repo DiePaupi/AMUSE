@@ -923,7 +923,7 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 	 * @throws NodeException
 	 */
 	private void classify() throws NodeException {
-		//
+		//AmuseLogger.write("ClassifierNodeScheduler", Level.DEBUG, "classify in ClassifierNodeScheduler started");
 		boolean isSupervised;
 		if (commonInterface instanceof ClassifierSupervisedInterface) {
 			isSupervised = true;
@@ -1064,7 +1064,7 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 	private void saveClassifierResultToFile(ArrayList<ClassifiedSongPartitions> classifierResult) throws NodeException {
 		try {
 			String classificationOutput = ((ClassificationConfiguration)taskConfiguration).getClassificationOutput();
-			File classifierResultFile = new File(((ClassificationConfiguration)taskConfiguration).getClassificationOutput());
+			File classifierResultFile = new File(classificationOutput);
 			if (classifierResultFile.exists())
 				if (!classifierResultFile.canWrite()) {
 					throw new NodeException("Cannot save classification results");

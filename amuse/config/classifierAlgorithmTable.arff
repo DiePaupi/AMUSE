@@ -7,7 +7,7 @@
 % Algorithm name
 @ATTRIBUTE Name STRING
 % Algorithm category
-@ATTRIBUTE Category {"Unsupervised", "Supervised", "Supervised>Trees", "Mixed"}
+@ATTRIBUTE Category {"Unsupervised", "Unupervised>Partitional", "Unsupervised>Hierarchical", "Supervised", "Supervised>Trees", "Mixed"}
 % Java class which runs classification training
 @ATTRIBUTE TrainerAdapterClass STRING
 % Java class which runs classification
@@ -61,4 +61,6 @@
 6, "FKNN", "Supervised", amuse.nodes.trainer.methods.supervised.FKNNAdapter, amuse.nodes.classifier.methods.supervised.FKNNAdapter, "", -1, -1, -1, -1, -1, "fuzzy k-nearest neighbours", "Number of neighbours:", "[%i]", "[1]", "The number of neighbours", 1, 1, 1, 1, 1, 1, 0, 0
 
 % Unsupervised methods
-7, "X-Means", "Unsupervised", amuse.nodes.classifier.methods.unsupervised.XMeansAdapter, amuse.nodes.classifier.methods.unsupervised.XMeansAdapter, "RapidMiner9", -1,-1,-1,-1,-1, "Unsupervised x-Means clustering from RapidMiner", "k min:|k max:|Numerical Measure:|max runs:|max optimization steps:", "[%i %i %n{EuclideanDistance, CamberraDistance, ChebychevDistance, CorrelationSimilarity, CosineSimilarity, DiceSimilarity, DynamicTimeWarpingDistance, InnerProductSimilarity, JaccardSimilarity, KernelEuclideanDistance} %i %i]", "[3_60_EuclideanDistance_30_100]", "The minimal number of clusters to be generated|The maximal number of clusters to be generated|The numerical measure to be used| The maximal number of runs|The maximal number of optimization steps", 1,1,0,1,1,0,1,0
+7, "X-Means", "Unupervised>Partitional", amuse.nodes.classifier.methods.unsupervised.XMeansAdapter, amuse.nodes.classifier.methods.unsupervised.XMeansAdapter, "RapidMiner9", -1,-1,-1,-1,-1, "Unsupervised x-Means clustering from RapidMiner", "k min:|k max:|Numerical Measure:|max runs:|max optimization steps:", "[%i %i %n{EuclideanDistance, CamberraDistance, ChebychevDistance, CorrelationSimilarity, CosineSimilarity, DiceSimilarity, DynamicTimeWarpingDistance, InnerProductSimilarity, JaccardSimilarity, KernelEuclideanDistance} %i %i]", "[3_60_EuclideanDistance_30_100]", "The minimal number of clusters to be generated|The maximal number of clusters to be generated|The numerical measure to be used| The maximal number of runs|The maximal number of optimization steps", 1,1,0,1,1,0,1,0
+
+8, "GAAC", "Unupervised>Hierarchical", amuse.nodes.classifier.methods.unsupervised.GAACAdapter, amuse.nodes.classifier.methods.unsupervised.GAACAdapter, "", -1,-1,-1,-1,-1, "Unsupervised Group Averaged Agglomerative Clustering", "Numerical Measure:", "[%n{EuclideanDistance, CamberraDistance, ChebychevDistance, CorrelationSimilarity, CosineSimilarity, DiceSimilarity, DynamicTimeWarpingDistance, InnerProductSimilarity, JaccardSimilarity, KernelEuclideanDistance}]", "[EuclideanDistance]", "The numerical measure to be used", 1,1,0,1,1,0,1,0
