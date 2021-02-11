@@ -393,7 +393,9 @@ public class ClassificationConfiguration extends TaskConfiguration {
 		List<Integer> ids = null;
 		
 			if(inputSourceType.equals(InputSourceType.CATEGORY_ID)) {
-				this.inputToClassify = new FileInput(inputSource);
+				//this.inputToClassify = new FileInput(inputSource);
+				throw new IllegalStateException ("You tried giving Input via CategoryID"
+						+ "but that isn't ok when using unsupervised learning. Try File List.");
 			} else if(inputSourceType.equals(InputSourceType.FILE_LIST)) {
 				DataSetAbstract inputFileSet; 
 				try {
@@ -574,7 +576,9 @@ public class ClassificationConfiguration extends TaskConfiguration {
 		List<Integer> ids = null;
 		
 			if(inputSourceType.equals(InputSourceType.CATEGORY_ID)) {
-				this.inputToClassify = new FileInput(inputSource);
+				//this.inputToClassify = new FileInput(inputSource);
+				throw new IllegalStateException ("You tried giving Input via CategoryID"
+						+ "but that isn't ok when using unsupervised learning. Try File List.");
 			} else if(inputSourceType.equals(InputSourceType.FILE_LIST)) {
 				DataSetAbstract inputFileSet; 
 				try {

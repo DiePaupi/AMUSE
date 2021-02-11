@@ -16,7 +16,7 @@ import amuse.util.AmuseLogger;
 import amuse.util.LibraryInitializer;
 
 /**
- * Clusters given data by using the Group Averaged Agglomerative Clustering method
+ * Clusters given data by using Ward's Agglomeration
  * @author Pauline Speckmann
  *
  */
@@ -77,20 +77,24 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
         			for (int j=0; j < attributeCount; j++ ) {
         				Attribute at = dataSetToClassify.getAttribute(j);
         				attributeNames[j] = at.getName();
-        				AmuseLogger.write("WardAdapter saved feature name in attributeNames[" + j + "]", Level.DEBUG, (at.getName() + "\t"));
+        				//AmuseLogger.write("WardAdapter saved feature name in attributeNames[" + j + "]", Level.DEBUG, (at.getName() + "\t"));
         			}
+        			AmuseLogger.write("WardAdapter", Level.DEBUG, "Saved all " + attributeCount + " feature names.");
         			
         		double[][] allFeatureValues = new double[valueCount][attributeCount];
         			for (int i = 0; i < valueCount; i++) {
         				for (int j=0; j < attributeCount; j++ ) {
         					Attribute at = dataSetToClassify.getAttribute(j);
         					allFeatureValues[i][j] = (double) at.getValueAt(i);
-        					AmuseLogger.write("WardAdapter saved value in allFeatureValues[" + i + "][" + j + "]", Level.DEBUG, (at.getValueAt(i) + "\t"));
+        					//AmuseLogger.write("WardAdapter saved value in allFeatureValues[" + i + "][" + j + "]", Level.DEBUG, (at.getValueAt(i) + "\t"));
         				}
-        				AmuseLogger.write("WardAdapter", Level.DEBUG, ("This was value row " + i + " +1 since it starts at 0"));
-        				AmuseLogger.write("WardAdapter", Level.DEBUG, (""));
+        				//AmuseLogger.write("WardAdapter", Level.DEBUG, ("This was value row " + i + " +1 since it starts at 0"));
+        				//AmuseLogger.write("WardAdapter", Level.DEBUG, (""));
         			}
+        			AmuseLogger.write("WardAdapter", Level.DEBUG, "Saved all " + valueCount + " feature values.");
         		
+        //TODO: Songs trennen - bisher sind alle untereinander weg, so dass sie im folgenden Schritt zusammen gemittelt werden
+        			
         		// Erstelle für jedes Attribut / Feature einen Durchschnittswert
         		double[] avaregedFeatureValues = new double[attributeCount];
         		for (int j = 0; j < attributeCount; j++ ) {
@@ -98,16 +102,18 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
         			for (int i = 0; i < valueCount; i++) {
         				sum = sum + allFeatureValues[i][j];
         			}
-        			AmuseLogger.write("WardAdapter", Level.DEBUG, ("Calculating the average: " + sum + " / " + valueCount));
+        			//AmuseLogger.write("WardAdapter", Level.DEBUG, ("Calculating the average: " + sum + " / " + valueCount));
         			double avg = sum / valueCount;
         			avaregedFeatureValues[j] = avg;
-        			AmuseLogger.write("WardAdapter", Level.DEBUG, ("The avaragedFeatureValue[" + j + "] is " + avg + "for Feature " + attributeNames[j]));
+        			AmuseLogger.write("WardAdapter", Level.DEBUG, ("The avaragedFeatureValue[" + j + "] is " + avg + " for Feature " + attributeNames[j]));
         		}
+        		AmuseLogger.write("WardAdapter", Level.DEBUG, "Calculated all feature averages.");
         	
         	//-----------------------------------------------------------------------------------------------------------------------------
         	// (2) Jedes SongToClassify-VektorTeil einem eigenen Cluster zuordnen
         	//-----------------------------------------------------------------------------------------------------------------------------
-        	
+        		// Wie greife ich auf die Songanzahl zu?
+        		
         	//-----------------------------------------------------------------------------------------------------------------------------
         	// (3) Berechne die (un-)ähnlichkeits Matrix aller Songs mit der Lance-William Sache
         	//	   Hier vielleicht auch Wahl zwischen LW und Klassisch lassen
