@@ -7,10 +7,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
 
+import org.apache.log4j.Level;
+
 import amuse.data.io.attributes.Attribute;
 import amuse.data.io.attributes.NominalAttribute;
 import amuse.data.io.attributes.NumericAttribute;
 import amuse.data.io.attributes.StringAttribute;
+import amuse.util.AmuseLogger;
 
 public abstract class DataSetAbstract implements Serializable {
 
@@ -101,6 +104,29 @@ public abstract class DataSetAbstract implements Serializable {
 			}
 			System.out.println("");
 		}
+	}
+	public void showSet() {
+		AmuseLogger.write("DataSetAbstract", Level.DEBUG, "BEGINNING TO SHOW DATASET");
+    	AmuseLogger.write("DataSetAbstract", Level.DEBUG, ("DataSetName: " + this.getName()));
+		for (Attribute at : attributes) {
+			if (at instanceof NumericAttribute) {
+				AmuseLogger.write("DataSetAbstract", Level.DEBUG, ("NumericAttribute: " + at.getName()));
+			} else if (at instanceof StringAttribute) {
+				AmuseLogger.write("DataSetAbstract", Level.DEBUG, ("StringAttribute: " + at.getName()));
+			} else if (at instanceof NominalAttribute) {
+				AmuseLogger.write("DataSetAbstract", Level.DEBUG, ("NominalAttribute: " + at.getName()));
+			}
+		}
+		AmuseLogger.write("DataSetAbstract", Level.DEBUG, ("This DataSet contains " + getValueCount()
+				+ " values."));
+		for (int i = 0; i < this.getAttribute(0).getValueCount(); i++) {
+			for (Attribute at : attributes) {
+				AmuseLogger.write("DataSetAbstract", Level.DEBUG, (at.getValueAt(i) + "\t"));
+			}
+			AmuseLogger.write("DataSetAbstract", Level.DEBUG, ("This was value row " + i + " +1 since it starts at 0"));
+			AmuseLogger.write("DataSetAbstract", Level.DEBUG, (""));
+		}
+		AmuseLogger.write("DataSetAbstract", Level.DEBUG, "FINISHED TO SHOW DATASET");
 	}
 
 	public void checkStringAttribute(String attributeName) {
