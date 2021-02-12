@@ -145,23 +145,22 @@ public class XMeansAdapter extends AmuseTask implements ClassifierUnsupervisedIn
          		DataSet amuseDataSet = new DataSet("XMeansResultDataSet");
     			for (int j=0; j<resultDataSet.getAttributeCount(); j++) {
     				// If the attribute is NOT the id copy the attribute to the amuseDataSet
-    				if (!resultDataSet.getAttribute(j).getName().equals("id") || !resultDataSet.getAttribute(j).getName().equals("cluster")) {
+    				if (!resultDataSet.getAttribute(j).getName().equals("id") && !resultDataSet.getAttribute(j).getName().equals("cluster")) {
     					amuseDataSet.addAttribute(resultDataSet.getAttribute(j));
     				}
     			}
-    			AmuseLogger.write("XMeansAdapter", Level.DEBUG, "Copied the result DataSet but without the id attribute");
     			
     			// Get the cluster numbers from the resultDataSet and 
     			// count how many different clusters there are (because that's how many new attributes are needed)
     			int valueAmount = resultDataSet.getAttribute(0).getValueCount();
     			Attribute clusterResultAtt = resultDataSet.getAttribute("cluster");
     			int[] clusterResultArray = new int[valueAmount];
+    			
     			int maxClusterValue = 0;
         		for (int i=0; i<valueAmount; i++) {
         			String currentRawCluster = (String) clusterResultAtt.getValueAt(i);
         				// value should be something like "cluster_1" so delete the first 8 chars
         			currentRawCluster = currentRawCluster.substring(8);
-        			//clusterResultAtt.setValueAt(i, currentRawCluster);
         			
         			int currClusterInt = Integer.parseInt(currentRawCluster);
         			clusterResultArray[i] = currClusterInt;
@@ -176,32 +175,22 @@ public class XMeansAdapter extends AmuseTask implements ClassifierUnsupervisedIn
         		
         		// Create new Cluster Attributes
         		for (int c=0; c<maxClusterValue+1; c++) {
-        			Attribute clusterX = new NumericAttribute("cluster_" + c, new ArrayList<Double>());
-        			AmuseLogger.write("XMeansAdapter", Level.DEBUG, "Created new cluster attribute nr. " + c);
-        			for (int i=0; i < valueAmount; i++) {
-        				//int currClusterInt = Integer.parseInt((String) clusterResultAtt.getValueAt(i));
+        			ArrayList<Double> clusterXvalueList = new ArrayList<Double>();
+        			for (int i=0; i < clusterResultArray.length; i++) {
         				int currClusterInt = clusterResultArray[i];
         				if (currClusterInt == c) {
-        					clusterX.setValueAt(i, 1.0);
+        					clusterXvalueList.add(i, 1.0);
         				} else {
-        					clusterX.setValueAt(i, 0.0);
+        					clusterXvalueList.add(i, 0.0);
         				}
         			}
-        			AmuseLogger.write("XMeansAdapter", Level.DEBUG, "Wrote values for the cluster attribute nr. " + c);
+        			Attribute clusterX = new NumericAttribute("cluster_" + c, clusterXvalueList);
         			amuseDataSet.addAttribute(clusterX);
-        			AmuseLogger.write("XMeansAdapter", Level.DEBUG, "Added the ClusterAttribute to the amuseDataSet");
         		}
-        		
-        		AmuseLogger.write("XMeansAdapter", Level.DEBUG, "XMeans edited the result to AMUSE standad");
-        		amuseDataSet.showSet();
+        		AmuseLogger.write("XMeansAdapter", Level.DEBUG, "XMeans successfully edited the result to AMUSE standad");
     		
     		// Give the amuseDataSet to the ClassificationConfiguration so it may be put together and saved there
             ((ClassificationConfiguration)(this.correspondingScheduler.getConfiguration())).setInputToClassify(new DataSetInput(amuseDataSet));
-            
-            // Save the result
-         	//String outputPath = AmusePreferences.get(KeysStringValue.AMUSE_PATH) + File.separator + "experiments" + File.separator + "XMeans_Result";
-         	//amuseDataSet.saveToArffFile(new File(outputPath));
-         	//AmuseLogger.write("XMeansAdapter", Level.DEBUG, "XMeans Results were saved to " + outputPath);
 
         } catch(Exception e) {
             throw new NodeException("Error clustering data: " + e.getMessage());
