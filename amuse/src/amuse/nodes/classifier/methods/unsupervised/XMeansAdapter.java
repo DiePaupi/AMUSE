@@ -191,6 +191,10 @@ public class XMeansAdapter extends AmuseTask implements ClassifierUnsupervisedIn
     		
     		// Give the amuseDataSet to the ClassificationConfiguration so it may be put together and saved there
             ((ClassificationConfiguration)(this.correspondingScheduler.getConfiguration())).setInputToClassify(new DataSetInput(amuseDataSet));
+            
+            // Save to .arff file
+            String outputPath = AmusePreferences.get(KeysStringValue.AMUSE_PATH) + File.separator + "experiments" + File.separator + "XMeans_Result";
+            amuseDataSet.saveToArffFile(new File(outputPath));
 
         } catch(Exception e) {
             throw new NodeException("Error clustering data: " + e.getMessage());
