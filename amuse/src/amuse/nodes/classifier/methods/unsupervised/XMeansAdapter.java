@@ -5,6 +5,7 @@ import amuse.data.io.ArffDataSet;
 import amuse.data.io.DataSet;
 import amuse.data.io.DataSetInput;
 import amuse.data.io.attributes.Attribute;
+import amuse.data.io.attributes.NumericAttribute;
 import amuse.interfaces.nodes.NodeException;
 import amuse.interfaces.nodes.methods.AmuseTask;
 import amuse.nodes.classifier.ClassificationConfiguration;
@@ -148,17 +149,22 @@ public class XMeansAdapter extends AmuseTask implements ClassifierUnsupervisedIn
     					amuseDataSet.addAttribute(resultDataSet.getAttribute(j));
     				}
     			}
+    			AmuseLogger.write("XMeansAdapter", Level.DEBUG, "Copied the result DataSet but without the id attribute");
+    			
     			// Get the cluster numbers from the resultDataSet and 
     			// count how many different clusters there are (because that's how many new attributes are needed)
+    			int valueAmount = resultDataSet.getAttribute(0).getValueCount();
     			Attribute clusterResultAtt = resultDataSet.getAttribute("cluster");
+    			int[] clusterResultArray = new int[valueAmount];
     			int maxClusterValue = 0;
-        		for (int i=0; i<resultDataSet.getAttribute(0).getValueCount(); i++) {
+        		for (int i=0; i<valueAmount; i++) {
         			String currentRawCluster = (String) clusterResultAtt.getValueAt(i);
         				// value should be something like "cluster_1" so delete the first 8 chars
         			currentRawCluster = currentRawCluster.substring(8);
-        			clusterResultAtt.setValueAt(i, currentRawCluster);
+        			//clusterResultAtt.setValueAt(i, currentRawCluster);
         			
         			int currClusterInt = Integer.parseInt(currentRawCluster);
+        			clusterResultArray[i] = currClusterInt;
         			if (maxClusterValue < currClusterInt) {
         				maxClusterValue = currClusterInt;
         			}
@@ -166,12 +172,28 @@ public class XMeansAdapter extends AmuseTask implements ClassifierUnsupervisedIn
         		if (maxClusterValue == 0) {
         			AmuseLogger.write("XMeansAdapter", Level.ERROR , "There is only 1 giant Cluster and everything is in it!");
         		}
+        		AmuseLogger.write("XMeansAdapter", Level.DEBUG, "There are " + maxClusterValue + "+1 different clusters.");
         		
         		// Create new Cluster Attributes
-        		for (int c=0; c<maxClusterValue; c++) {
-        			//Attribute clsuterX = new Attribute();
+        		for (int c=0; c<maxClusterValue+1; c++) {
+        			Attribute clusterX = new NumericAttribute("cluster_" + c, new ArrayList<Double>());
+        			AmuseLogger.write("XMeansAdapter", Level.DEBUG, "Created new cluster attribute nr. " + c);
+        			for (int i=0; i < valueAmount; i++) {
+        				//int currClusterInt = Integer.parseInt((String) clusterResultAtt.getValueAt(i));
+        				int currClusterInt = clusterResultArray[i];
+        				if (currClusterInt == c) {
+        					clusterX.setValueAt(i, 1.0);
+        				} else {
+        					clusterX.setValueAt(i, 0.0);
+        				}
+        			}
+        			AmuseLogger.write("XMeansAdapter", Level.DEBUG, "Wrote values for the cluster attribute nr. " + c);
+        			amuseDataSet.addAttribute(clusterX);
+        			AmuseLogger.write("XMeansAdapter", Level.DEBUG, "Added the ClusterAttribute to the amuseDataSet");
         		}
+        		
         		AmuseLogger.write("XMeansAdapter", Level.DEBUG, "XMeans edited the result to AMUSE standad");
+        		amuseDataSet.showSet();
     		
     		// Give the amuseDataSet to the ClassificationConfiguration so it may be put together and saved there
             ((ClassificationConfiguration)(this.correspondingScheduler.getConfiguration())).setInputToClassify(new DataSetInput(amuseDataSet));
