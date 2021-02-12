@@ -121,7 +121,7 @@ public abstract class DataSetAbstract implements Serializable {
 				+ " values."));
 		for (int i = 0; i < this.getAttribute(0).getValueCount(); i++) {
 			for (Attribute at : attributes) {
-				AmuseLogger.write("DataSetAbstract", Level.DEBUG, (at.getValueAt(i) + "\t"));
+				AmuseLogger.write("DataSetAbstract", Level.DEBUG, ("" + at.getValueAt(i) + "\t"));
 			}
 			AmuseLogger.write("DataSetAbstract", Level.DEBUG, ("This was value row " + i + " +1 since it starts at 0"));
 			AmuseLogger.write("DataSetAbstract", Level.DEBUG, (""));

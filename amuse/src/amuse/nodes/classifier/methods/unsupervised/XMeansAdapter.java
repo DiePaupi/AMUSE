@@ -1,8 +1,10 @@
 package amuse.nodes.classifier.methods.unsupervised;
 
 
+import amuse.data.io.ArffDataSet;
 import amuse.data.io.DataSet;
 import amuse.data.io.DataSetInput;
+import amuse.data.io.attributes.Attribute;
 import amuse.interfaces.nodes.NodeException;
 import amuse.interfaces.nodes.methods.AmuseTask;
 import amuse.nodes.classifier.ClassificationConfiguration;
@@ -27,6 +29,8 @@ import com.rapidminer.operator.ports.OutputPort;
 import com.rapidminer.tools.OperatorService;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.StringTokenizer;
 
 import org.apache.log4j.Level;
@@ -99,8 +103,6 @@ public class XMeansAdapter extends AmuseTask implements ClassifierUnsupervisedIn
          getConfiguration()).getInputToClassify()).getDataSet();
 
         try {
-            //TODO: Prepare Data (For example: create median for each feature) or don't, I don't know yet
-
             /* Create the RapidMiner process */
             Process process = new Process();
 
@@ -110,45 +112,74 @@ public class XMeansAdapter extends AmuseTask implements ClassifierUnsupervisedIn
                 // Set the parameters and add the clustering to the process
                 clusterer.setParameter("k_min", new Integer(k_min).toString());
                 clusterer.setParameter("k_max", new Integer(k_max).toString());
-                //clusterer.setParameter("numericalMeasure", this.numericalMeasure);
+                	//clusterer.setParameter("numericalMeasure", this.numericalMeasure);
                 clusterer.setParameter("max_runs", new Integer(max_runs).toString());
                 clusterer.setParameter("max_optimization_steps", new Integer(max_opt_steps).toString());
-                //clusterer.setParameter("measureType", this.measureType);
-                //clusterer.setParameter("clusteringAlgorithm", this.clusteringAlgorithm);
+                	//clusterer.setParameter("measureType", this.measureType);
+                	//clusterer.setParameter("clusteringAlgorithm", this.clusteringAlgorithm);
                 process.getRootOperator().getSubprocess(0).addOperator(clusterer);
-                //AmuseLogger.write("XMeansAdapter", Level.DEBUG, "Clusterer prameters were set, XMeans was added to the process");
-
-                // Add writing the culstering result to the process
-                ResultWriter resWriter = OperatorService.createOperator(ResultWriter.class);
-//TODO kann mand en Paramter so setzen?                
-                resWriter.setParameter(ResultWriter.PARAMETER_RESULT_FILE , "//" + LibraryInitializer.RAPIDMINER_REPO_NAME + "/clustered_set");
-                process.getRootOperator().getSubprocess(0).addOperator(resWriter);
-                AmuseLogger.write("XMeansAdapter", Level.DEBUG, "ResultWriter was added to the process");
 
                 // Connect the ports so RapidMiner knows whats up
                 InputPort clustererInputPort = clusterer.getInputPorts().getPortByName("example set");
                 	// Return the the "clustered set" and not the "cluster model"
                 OutputPort clustererOutputPort = clusterer.getOutputPorts().getPortByName("clustered set");
-                InputPort resWriterInputPort = resWriter.getInputPorts().getPortByName("input");
                 InputPort processInputPort = process.getRootOperator().getSubprocess(0).getInnerSinks().getPortByIndex(0);
                 OutputPort processOutputPort = process.getRootOperator().getSubprocess(0).getInnerSources().getPortByIndex(0);
-
                 processOutputPort.connectTo(clustererInputPort);
-                clustererOutputPort.connectTo(resWriterInputPort);
                 clustererOutputPort.connectTo(processInputPort);
-                
-                AmuseLogger.write("XMeansAdapter", Level.DEBUG, "Ports were connected");
+                	//AmuseLogger.write("XMeansAdapter", Level.DEBUG, "Ports were connected");
 
             // Run the RapidMiner-Process - XMeans needs an ExampleSet so it's being converted here
             ExampleSet exampleSet = dataSetToClassify.convertToRapidMinerExampleSet();
-                //IOContainer result = process.run(new IOContainer(exampleSet));
-            process.run(new IOContainer(exampleSet));
+            IOContainer result = process.run(new IOContainer(exampleSet));
             AmuseLogger.write("XMeansAdapter", Level.DEBUG, "RapidMiner XMeans finished successfully");
 
-         	// Copy results to the result database
-         	String outputPath = AmusePreferences.get(KeysStringValue.AMUSE_PATH) + File.separator + "experiments" + File.separator + "XMeans_Result";
-         	FileOperations.copy(new File(LibraryInitializer.REPOSITORY_PATH + File.separator + "clustered_set"), new File(outputPath));
-         	AmuseLogger.write("XMeansAdapter", Level.DEBUG, "XMeans Results were copied to experiments");
+         	// Get the RapidMiner Result
+            exampleSet = result.get(ExampleSet.class);
+         	DataSet resultDataSet = new DataSet(exampleSet);
+         	
+         	// Edit the result so AMUSE can work with it again
+         	
+         		// Copy the result DataSet but without the id attribute (that RapidMiner put there)
+         		DataSet amuseDataSet = new DataSet("XMeansResultDataSet");
+    			for (int j=0; j<resultDataSet.getAttributeCount(); j++) {
+    				// If the attribute is NOT the id copy the attribute to the amuseDataSet
+    				if (!resultDataSet.getAttribute(j).getName().equals("id") || !resultDataSet.getAttribute(j).getName().equals("cluster")) {
+    					amuseDataSet.addAttribute(resultDataSet.getAttribute(j));
+    				}
+    			}
+    			// Get the cluster numbers from the resultDataSet and 
+    			// count how many different clusters there are (because that's how many new attributes are needed)
+    			Attribute clusterResultAtt = resultDataSet.getAttribute("cluster");
+    			int maxClusterValue = 0;
+        		for (int i=0; i<resultDataSet.getAttribute(0).getValueCount(); i++) {
+        			String currentRawCluster = (String) clusterResultAtt.getValueAt(i);
+        				// value should be something like "cluster_1" so delete the first 8 chars
+        			currentRawCluster = currentRawCluster.substring(8);
+        			clusterResultAtt.setValueAt(i, currentRawCluster);
+        			
+        			int currClusterInt = Integer.parseInt(currentRawCluster);
+        			if (maxClusterValue < currClusterInt) {
+        				maxClusterValue = currClusterInt;
+        			}
+        		}
+        		if (maxClusterValue == 0) {
+        			AmuseLogger.write("XMeansAdapter", Level.ERROR , "There is only 1 giant Cluster and everything is in it!");
+        		}
+        		
+        		// Create new Cluster Attributes
+        		for (int c=0; c<maxClusterValue; c++) {
+        			//Attribute clsuterX = new Attribute();
+        		}
+        		AmuseLogger.write("XMeansAdapter", Level.DEBUG, "XMeans edited the result to AMUSE standad");
+    		
+    		// Give the amuseDataSet to the ClassificationConfiguration so it may be put together and saved there
+            ((ClassificationConfiguration)(this.correspondingScheduler.getConfiguration())).setInputToClassify(new DataSetInput(amuseDataSet));
+            
+            // Save the result
+         	//String outputPath = AmusePreferences.get(KeysStringValue.AMUSE_PATH) + File.separator + "experiments" + File.separator + "XMeans_Result";
+         	//amuseDataSet.saveToArffFile(new File(outputPath));
+         	//AmuseLogger.write("XMeansAdapter", Level.DEBUG, "XMeans Results were saved to " + outputPath);
 
         } catch(Exception e) {
             throw new NodeException("Error clustering data: " + e.getMessage());
