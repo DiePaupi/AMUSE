@@ -134,7 +134,11 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
             	double minValue = dissimilarityMatrix[0][1];
             	for (int m=0; m < dissimilarityMatrix.length; m++) {
             		for (int n=0; n < dissimilarityMatrix[0].length; n++) {
-            			if (dissimilarityMatrix[m][n] > 0.0 && dissimilarityMatrix[m][n] < minValue) {
+            			
+            			if (n>m && 
+            				dissimilarityMatrix[m][n] > 0.0 && 
+            				dissimilarityMatrix[m][n] < minValue) {
+            				
             				minM = m;
             				minN = n;
             				minValue = dissimilarityMatrix[m][n];
@@ -143,10 +147,11 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
             	}
             	
             	// Merge clusters
+            	List<Integer> clusterToBeMergedInto = clusterAffiliation.get(minM);
+            	List<Integer> clusterToBeAnnexed = clusterAffiliation.get(minN);
             	
-            	
-            	// Use the same matrix to do that n-2 thing
-            	
+            	clusterToBeMergedInto.addAll(clusterToBeAnnexed);
+            	clusterAffiliation.remove(minN);
             	
             	//-----------------------------------------------------------------------------------------------------------------------------
             	// (4) Für das ähnlichste Clusterpaar:
@@ -154,6 +159,8 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
             	//		- Soll noch ein drittes zum Cluster hinzugefügt werden oder lieber ein neues Paar erstellt?
             	//	   Wiederhole bis k erreicht oder nur noch ein großes Cluster existiert
             	//-----------------------------------------------------------------------------------------------------------------------------
+            	
+            	//TODO
             	
             	// Wenn der richtige Clustermerge gefunden wurde: 
             	// 	Die Änderung in clusterAffiliation speichern, Nummer der Cluster um 1 reduzieren und von vorne beginnen
