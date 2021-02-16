@@ -94,8 +94,11 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 	/** Here the description of data instances (from what music files and intervals) is saved */
 	private ArrayList<SongPartitionsDescription> descriptionOfClassifierInput = null;
 	
-	//** Number of categories that are classified */
+	/** Number of categories that are classified / clusters */
 	private int numberOfCategories;
+	
+	/** Saves the methodType (Regression not included) */
+	private boolean isSupervised;
 	
 	/**
 	 * Constructor
@@ -123,7 +126,9 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 		}
 		
 		// Proceed the task
+		AmuseLogger.write("ClassifierNodeScheduler", Level.DEBUG, "Starting proceedTask()");
 		thisScheduler.proceedTask(args);
+		AmuseLogger.write("ClassifierNodeScheduler", Level.DEBUG, "Finished proceedTask()");
 		
 		// Remove the folder for input and intermediate results
 		try {
@@ -153,6 +158,7 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 		}
 		this.jobId = new Long(jobId);
 		this.taskConfiguration = classificationConfiguration;
+		isSupervised = ((ClassificationConfiguration)taskConfiguration).getMethodType() == MethodType.SUPERVISED;
 		// If this node is started directly, the properties are loaded from AMUSEHOME folder;
 		// if this node is started via command line (e.g. in a grid, the properties are loaded from
 		// %classifier home folder%/input
@@ -348,16 +354,48 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 						inputForClassification = new DataSet("ClassificationSet");
 					
 						//add the attributes (except for attributes that are to be ignored and the Id)
-						for(int i = 0; i < completeInput.getAttributeCount(); i++) {
-							if(!attributesToIgnore.contains(i) && !completeInput.getAttribute(i).getName().equals("Id")) {
-								if(completeInput.getAttribute(i).getName().equals("NumberOfCategories")) {
-									AmuseLogger.write(ClassifierNodeScheduler.class.getName(), Level.WARN, "NumberOfCategories is not an allowed attribute name. The attribute will be ignored.");
-								}
-								else {
-									inputForClassification.addAttribute(completeInput.getAttribute(i));
+						// TODO: -Paupi- and count the number of clusters if unsupervised
+						if (isSupervised) {
+							for(int i = 0; i < completeInput.getAttributeCount(); i++) {
+								if(!attributesToIgnore.contains(i) && !completeInput.getAttribute(i).getName().equals("Id")) {
+									if(completeInput.getAttribute(i).getName().equals("NumberOfCategories")) {
+										AmuseLogger.write(ClassifierNodeScheduler.class.getName(), Level.WARN, "NumberOfCategories is not an allowed attribute name. The attribute will be ignored.");
+									}
+									else {
+										inputForClassification.addAttribute(completeInput.getAttribute(i));
+									}
 								}
 							}
+						} else {
+							int clusterNumber = 0;
+							
+							for(int i = 0; i < completeInput.getAttributeCount(); i++) {
+								if(!attributesToIgnore.contains(i) && !completeInput.getAttribute(i).getName().equals("Id")) {
+									if(completeInput.getAttribute(i).getName().equals("NumberOfCategories")) {
+										AmuseLogger.write(ClassifierNodeScheduler.class.getName(), Level.WARN, "NumberOfCategories is not an allowed attribute name. The attribute will be ignored.");
+									}
+									else {
+										inputForClassification.addAttribute(completeInput.getAttribute(i));
+									}
+								}
+								// if the name of attribute i begins with "cluster" -> count it
+								if (completeInput.getAttribute(i).getName().substring(0,7).equals("cluster")) {
+									clusterNumber++;
+								}
+							}
+							
+							if (clusterNumber == 0) {
+								throw new NodeException("It's supposed to be unsupervised classification but there wasn't any cluster attribute.");
+							} else if (clusterNumber ==1) {
+								AmuseLogger.write(ClassifierNodeScheduler.class.getName(), Level.WARN, "There is only one giant cluster!");
+								numberOfCategories = clusterNumber;
+							} else {
+								AmuseLogger.write(ClassifierNodeScheduler.class.getName(), Level.DEBUG, "There were "+ clusterNumber +" Clusters detected.");
+								numberOfCategories = clusterNumber;
+							}
 						}
+						AmuseLogger.write("ClassifierNodeScheduler", Level.DEBUG, "InputForClassification added it's attributes.");
+						
 					//Prepare the description of the classifier input
 					boolean startAndEnd = true;
 					try {
@@ -750,7 +788,10 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 	private void configureClassificationMethod() throws NodeException {
 		Integer requiredAlgorithm; 
 		// Is it supervised or unsupervised - regression not included
-		boolean isSupervised = ((ClassificationConfiguration)taskConfiguration).getMethodType() == MethodType.SUPERVISED;
+		if (isSupervised != (((ClassificationConfiguration)taskConfiguration).getMethodType() == MethodType.SUPERVISED)) {
+			throw new NodeException("ClassifierNodeScheduler - configureClassificationMethod(): "
+					+ "The method type set in proceedTask() doesn't match the current one.");
+		}
 
 		// If parameter string for this algorithm exists..
 		if(((ClassificationConfiguration)taskConfiguration).getAlgorithmDescription().contains("[") && 
@@ -856,7 +897,7 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 						
 						Class<?> adapter = Class.forName(currentInstance.stringValue(classifierAdapterClassAttribute));
 						
-						//TODO: Does this even work?
+						// Set the Interface to supervised (classify(String pathToModel)) or unsupervised (classify()) specific Interface
 						if (isSupervised) {
 							this.cSinterface = (ClassifierSupervisedInterface)adapter.newInstance();
 							commonInterface = this.cSinterface;
@@ -924,13 +965,18 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 	 */
 	private void classify() throws NodeException {
 		//AmuseLogger.write("ClassifierNodeScheduler", Level.DEBUG, "classify in ClassifierNodeScheduler started");
-		boolean isSupervised;
 		if (commonInterface instanceof ClassifierSupervisedInterface) {
-			isSupervised = true;
+			if (isSupervised != true) {
+				throw new NodeException("ClassifierNodeScheduler - classify(): "
+						+ "The Interface for supervised classification was used, but the loaded method type didn't match that.");
+			}
 		} else if (commonInterface instanceof ClassifierUnsupervisedInterface) {
-			isSupervised = false;
+			if (isSupervised != false) {
+				throw new NodeException("ClassifierNodeScheduler - classify(): "
+						+ "The Interface for unsupervised classification was used, but the loaded method type didn't match that.");
+			}
 		} else {
-			throw new NodeException("ClassifierNodeScheduler - classify: "
+			throw new NodeException("ClassifierNodeScheduler - classify(): "
 					+ "Seems like Paupi couldn't figure out if you wanted supervised or unsupervised classification");
 		}
 				
@@ -1050,9 +1096,9 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 			
 			// Save the partition data for this song
 			classificationResults.add(new ClassifiedSongPartitions(descriptionOfClassifierInput.get(i).getPathToMusicSong(), 
-			descriptionOfClassifierInput.get(i).getSongId(),
-			descriptionOfClassifierInput.get(i).getStartMs(), 
-			descriptionOfClassifierInput.get(i).getEndMs(), labels, relationships));
+					descriptionOfClassifierInput.get(i).getSongId(),
+					descriptionOfClassifierInput.get(i).getStartMs(), 
+					descriptionOfClassifierInput.get(i).getEndMs(), labels, relationships));
 		}
 		
 		return classificationResults;

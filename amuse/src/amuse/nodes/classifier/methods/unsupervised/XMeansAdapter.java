@@ -203,10 +203,11 @@ public class XMeansAdapter extends AmuseTask implements ClassifierUnsupervisedIn
         		AmuseLogger.write("XMeansAdapter", Level.DEBUG, "XMeans successfully edited the result to AMUSE standad");
     		
     		// Give the amuseDataSet to the ClassificationConfiguration so it may be put together and saved there
+        	// The ClassifierNodeScheduler proceedTask(...) returns or saves an ArrayList<ClassifiedSongPartitionsDescription>
             ((ClassificationConfiguration)(this.correspondingScheduler.getConfiguration())).setInputToClassify(new DataSetInput(amuseDataSet));
             
             // Save to .arff file
-            String outputPath = AmusePreferences.get(KeysStringValue.AMUSE_PATH) + File.separator + "experiments" + File.separator + "XMeans_Result";
+            String outputPath = AmusePreferences.get(KeysStringValue.AMUSE_PATH) + File.separator + "experiments" + File.separator + "XMeans_Result.arff";
             amuseDataSet.saveToArffFile(new File(outputPath));
 
         } catch(Exception e) {

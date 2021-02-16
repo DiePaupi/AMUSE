@@ -166,7 +166,7 @@ public class FastKMeansAdapter extends AmuseTask implements ClassifierUnsupervis
             ((ClassificationConfiguration)(this.correspondingScheduler.getConfiguration())).setInputToClassify(new DataSetInput(amuseDataSet));
             
             // Save to .arff file
-            String outputPath = AmusePreferences.get(KeysStringValue.AMUSE_PATH) + File.separator + "experiments" + File.separator + "FastKMeansAdapter_Result";
+            String outputPath = AmusePreferences.get(KeysStringValue.AMUSE_PATH) + File.separator + "experiments" + File.separator + "FastKMeansAdapter_Result.arff";
             amuseDataSet.saveToArffFile(new File(outputPath));
 
         } catch(Exception e) {

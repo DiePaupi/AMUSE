@@ -54,7 +54,7 @@ import amuse.util.AmuseLogger;
 /**
  * Describes the parameters for a classification task, which will be specified within the non-abstract
  * classes Supervised- and UnClassificationConfiguration
- * @author Igor Vatolkin / Pauline Speckmann
+ * @author Igor Vatolkin
  *
  */
 public class ClassificationConfiguration extends TaskConfiguration {
@@ -897,7 +897,13 @@ public class ClassificationConfiguration extends TaskConfiguration {
 	 * @see amuse.interfaces.nodes.TaskConfiguration#getDescription()
 	 */
 	public String getDescription() {
-        return new String("Ground Truth Source: " + groundTruthCategoryId + " Output: " + classificationOutput);
+		if (this.getMethodType() == MethodType.SUPERVISED) {
+			return new String("Ground Truth Source: " + groundTruthCategoryId + " Output: " + classificationOutput);
+		} else if (this.getMethodType() == MethodType.UNSUPERVISED) {
+			return new String("Output: " + classificationOutput);
+		} else {
+			return new String("Error: The method type isn't supported yet.");
+		}
 	}
 
 	/**
