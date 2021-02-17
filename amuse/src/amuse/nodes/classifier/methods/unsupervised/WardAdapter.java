@@ -103,6 +103,13 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
         		clusterAffiliation.set(i, songsInThatCluster);
         	}
         	
+        	
+        	
+        	if (k == numberOfSongs) {
+        		// TODO
+        		// return just for every song one cluster
+        	}
+        	
         	// UNTIL ALL CLUSTERS HAVE BEEN MERGED
         	int mergeUntilThisClusterNumber;
         	if (k == 0 || k == 1) {
@@ -158,11 +165,8 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
             	//	   Wiederhole bis k erreicht oder nur noch ein großes Cluster existiert
             	//-----------------------------------------------------------------------------------------------------------------------------
             	
-            	if (mergeUntilThisClusterNumber > clusterAffiliation.size()) {
-            		throw new NodeException("WardAdapter - classify(): Somehow there are fewer clusters than you wanted. What did you do?");
-            	} 
             	// If the desired cluster number hasn't been reached yet
-            	else if (mergeUntilThisClusterNumber < clusterAffiliation.size()) {
+            	if (mergeUntilThisClusterNumber < clusterAffiliation.size()) {
             		
             		/** The dissimilarityMatrixTwo stores the ESS values for the centroid of cluster m united with cluster n */
                 	double[][] dMatrixTwo = new double[clusterAffiliation.size()][clusterAffiliation.size()];
@@ -188,7 +192,7 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
                 	}
                 	
                 	// Get the next minimum and the corresponding m and n values of the new dMatrixTwo
-                	double[] dMatrixTwoMinValues = calculateMininimum (dMatrixTwo);
+                	double[] dMatrixTwoMinValues = calculateMininimum(dMatrixTwo);
                 	
                 	
                 	// Does the next best merge contain the just merged cluster?
@@ -209,25 +213,25 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
                 		
                 		
                 	}
+            	}
+            	
+            	// IF ONLY TWO CLUSTERS ARE LEFT AND WE WANT ONLY ONE BIG CLUSTER
+        		// JUST MERGE THEM NOW
+            	if (clusterAffiliation.size() == 2 &&
+            			(k == 0 || k == 1)) {
+            		
+            		clusterToBeMergedInto = clusterAffiliation.get(0);
+            		clusterToBeAnnexed = clusterAffiliation.get(1);
                 	
-                	// IF ONLY TWO CLUSTERS ARE LEFT
-            		// JUST MERGE THEM NOW
-                	if (clusterAffiliation.size() == 2 &&
-                			clusterAffiliation.size() > mergeUntilThisClusterNumber) {
-                		
-                		clusterToBeMergedInto = clusterAffiliation.get(0);
-                		clusterToBeAnnexed = clusterAffiliation.get(1);
-                    	
-                    	clusterToBeMergedInto.addAll(clusterToBeAnnexed);
-                    	clusterAffiliation.remove(1);
-                		
-                	} else if (clusterAffiliation.size() < 1) {
-                		throw new NodeException("WardAdapter - classify(): Somehow there aren't ANY clusters. What did you do?");
-                	}
+                	clusterToBeMergedInto.addAll(clusterToBeAnnexed);
+                	clusterAffiliation.remove(1);
+            		
+            	} else if (clusterAffiliation.size() < 1) {
+            		throw new NodeException("WardAdapter - classify(): Somehow there aren't ANY clusters. What did you do?");
             	}
             }
             
-        	// NOW THERE IS ONLY ONE CLUSTER LEFT
+        	// NOW THERE ARE (HAVE TO BE) ONLY THE NUMBER OF DESIRED CLUSTERS LEFT
         	// SAVE
             	
         	
