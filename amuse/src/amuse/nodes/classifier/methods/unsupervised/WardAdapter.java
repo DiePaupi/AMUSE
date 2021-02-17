@@ -1,5 +1,8 @@
 package amuse.nodes.classifier.methods.unsupervised;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.StringTokenizer;
@@ -16,6 +19,8 @@ import amuse.interfaces.nodes.NodeException;
 import amuse.interfaces.nodes.methods.AmuseTask;
 import amuse.nodes.classifier.ClassificationConfiguration;
 import amuse.nodes.classifier.interfaces.ClassifierUnsupervisedInterface;
+import amuse.preferences.AmusePreferences;
+import amuse.preferences.KeysStringValue;
 import amuse.util.AmuseLogger;
 import amuse.util.LibraryInitializer;
 
@@ -97,6 +102,7 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
     		
     		/** clusterAffiliation is a list of all clusters which each hold a list with all songs that belong to it */
         	List<List<Integer>> clusterAffiliation = new ArrayList<List<Integer>>(numberOfSongs);
+        	Dendogram dendo = new Dendogram(clusterAffiliation);
         	for (int i=0; i < clusterAffiliation.size(); i++) {
         		ArrayList<Integer> songsInThatCluster = new ArrayList<Integer>();
         		songsInThatCluster.add(i);
@@ -155,6 +161,8 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
             	List<Integer> clusterToBeMergedInto = clusterAffiliation.get((int) dissimilarityMatrixMinValues[1]);
             	List<Integer> clusterToBeAnnexed = clusterAffiliation.get((int) dissimilarityMatrixMinValues[0]);
             	
+            	dendo.setNewMerge(clusterToBeMergedInto, clusterToBeAnnexed);
+            	
             	clusterToBeMergedInto.addAll(clusterToBeAnnexed);
             	clusterAffiliation.remove((int) dissimilarityMatrixMinValues[0]);
             	
@@ -200,6 +208,7 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
                 	if (clusterToBeMergedInto.equals(clusterAffiliation.get((int) dMatrixTwoMinValues[0])) ) {
                 		
                 		clusterToBeAnnexed = clusterAffiliation.get((int) dMatrixTwoMinValues[1]);
+                		dendo.setNewMerge(clusterToBeMergedInto, clusterToBeAnnexed);
                     	
                     	clusterToBeMergedInto.addAll(clusterToBeAnnexed);
                     	clusterAffiliation.remove((int) dissimilarityMatrixMinValues[1]);
@@ -207,6 +216,7 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
                 	} else if (clusterToBeMergedInto.equals(clusterAffiliation.get((int) dMatrixTwoMinValues[1]))) {
                 		
                 		clusterToBeAnnexed = clusterAffiliation.get((int) dMatrixTwoMinValues[0]);
+                		dendo.setNewMerge(clusterToBeMergedInto, clusterToBeAnnexed);
                     	
                     	clusterToBeMergedInto.addAll(clusterToBeAnnexed);
                     	clusterAffiliation.remove((int) dissimilarityMatrixMinValues[0]);
@@ -222,6 +232,8 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
             		
             		clusterToBeMergedInto = clusterAffiliation.get(0);
             		clusterToBeAnnexed = clusterAffiliation.get(1);
+            		
+            		dendo.setNewMerge(clusterToBeMergedInto, clusterToBeAnnexed);
                 	
                 	clusterToBeMergedInto.addAll(clusterToBeAnnexed);
                 	clusterAffiliation.remove(1);
@@ -233,12 +245,17 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
             
         	// NOW THERE ARE (HAVE TO BE) ONLY THE NUMBER OF DESIRED CLUSTERS LEFT
         	// SAVE
-            	
-        	
-        	
+    		String outputPath = AmusePreferences.get(KeysStringValue.AMUSE_PATH) + File.separator + "experiments" + File.separator;
+            // save to (outputPath + "Ward_Result.arff")
+    		
+    		// Write Dendogram
+    		File dendogramFile = new File(outputPath + "Ward_DENDOGRAM.txt");
+    		BufferedWriter fileWriter = new BufferedWriter(new FileWriter(dendogramFile));
+    		fileWriter.append( dendo.printClusters() );
+    		fileWriter.close();
       
         } catch(Exception e) {
-			throw new NodeException("Error classifying data: " + e.getMessage());
+			throw new NodeException("Error classifying data with the WardAdapter: " + e.getMessage());
 		}
 	}
 	
