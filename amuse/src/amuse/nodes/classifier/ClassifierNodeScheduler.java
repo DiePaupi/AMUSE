@@ -1203,5 +1203,9 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 	public void setNumberOfCategories(int numberOfCategories) {
 		this.numberOfCategories = numberOfCategories;
 	}
+
+	public ArrayList<SongPartitionsDescription> getDescriptionOfClassifierInput() {
+		return descriptionOfClassifierInput;
+	}
 }
 

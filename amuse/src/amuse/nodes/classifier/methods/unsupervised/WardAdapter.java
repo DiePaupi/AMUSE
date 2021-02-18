@@ -18,6 +18,7 @@ import amuse.data.io.attributes.StringAttribute;
 import amuse.interfaces.nodes.NodeException;
 import amuse.interfaces.nodes.methods.AmuseTask;
 import amuse.nodes.classifier.ClassificationConfiguration;
+import amuse.nodes.classifier.ClassifierNodeScheduler;
 import amuse.nodes.classifier.interfaces.ClassifierUnsupervisedInterface;
 import amuse.preferences.AmusePreferences;
 import amuse.preferences.KeysStringValue;
@@ -73,15 +74,19 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
 
         try {
         	//AmuseLogger.write("WardAdapter", Level.DEBUG, "BEGINNING TO SHOW DATASET");
-        	//dataSetToClassify.showSet();
+        	dataSetToClassify.showSet();
         	
         	//-----------------------------------------------------------------------------------------------------------------------------
         	// (1) Greife auf ArrayList<SongPartitionsDescription> descriptionOfClassifierInput aus dem ClassifierNodeScheduler zu
         	//-----------------------------------------------------------------------------------------------------------------------------
-        	int numberOfSongs = ; // TODO - Wert auf descriptionOfClassifierInput nehmen
-        	int numberOfFeatures = ; // TODO - Wert auf descriptionOfClassifierInput nehmen
+        	 ArrayList<SongPartitionsDescription> descriptionOfClassifierInput = 
+        			 ((ClassifierNodeScheduler)this.correspondingScheduler).getDescriptionOfClassifierInput();
         	
-        	if (k < 0 || k > numberOfSongs) {
+        	int numberOfSongs = descriptionOfClassifierInput.size();
+        	// TODO - Wert eventuell -1 wegen Id oder so
+        	int numberOfFeatures = dataSetToClassify.getAttributeCount(); 
+        	
+        	if (k < 0 || k >= numberOfSongs) {
         		throw new NodeException("WardAdapter - classify(): Your given k wasn't in range. "
         				+ "Try something bigger than 0 and smaller than your number of songs.");
         	}
@@ -94,20 +99,30 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
     		double[][] allValues = new double[numberOfSongs][numberOfFeatures];
     		
     		// Bilde den Durchschnitt (TODO oder Median) aller Partitionswerte
+    		int partitionsAlreadySeen = 0;
     		for (int i=0; i < numberOfSongs; i++) {
+    			int numberOfPartitionsForSongI = descriptionOfClassifierInput.get(i).getStartMs().length;
     			
-    			// TODO 
-    			// Mit Hilfe von descriptionOfClassifierInput BEFÜLLEN
+    			for (int j= partitionsAlreadySeen; j < numberOfPartitionsForSongI; j++) {
+    				for (int x=0; x < numberOfFeatures; x++) {
+    					allValues[i][x] += (double) dataSetToClassify.getAttribute(x).getValueAt(j);
+    				}
+    			}
+    			for (int x=0; x < numberOfFeatures; x++) {
+					allValues[i][x] = allValues[i][x] / numberOfPartitionsForSongI;
+				}
+    			
+    			partitionsAlreadySeen += numberOfPartitionsForSongI;
     		}
     		
     		/** clusterAffiliation is a list of all clusters which each hold a list with all songs that belong to it */
         	List<List<Integer>> clusterAffiliation = new ArrayList<List<Integer>>(numberOfSongs);
-        	Dendogram dendo = new Dendogram(clusterAffiliation);
         	for (int i=0; i < clusterAffiliation.size(); i++) {
         		ArrayList<Integer> songsInThatCluster = new ArrayList<Integer>();
         		songsInThatCluster.add(i);
         		clusterAffiliation.set(i, songsInThatCluster);
         	}
+        	Dendogram dendo = new Dendogram(clusterAffiliation);
         	
         	
         	
@@ -147,9 +162,28 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
                 			dissimilarityMatrix[n][m] = dissimilarityMatrix[m][n];
                 		} else {
                 			
-                			double[] centroid = this.calculateCentroid(m, n, allValues, clusterAffiliation);
-                			double ess = this.calculateESS();
-                			dissimilarityMatrix[n][m] = ess;
+                			double dissimilarity = 0.0;
+                			double[] centroidN = this.calculateCentroid(allValues, clusterAffiliation.get(n));
+            				double[] centroidM = this.calculateCentroid(allValues, clusterAffiliation.get(m));
+            				
+                			if (numericalMeasure.equals("LWDissimilarityUpdateFormula")) {
+                				
+                				//dissimilarity = this.calculateLWDissimilarity(
+                    			//		centroidN, clusterAffiliation.get(n).size(), 
+                    			//		centroidM, clusterAffiliation.get(m).size(), 
+                    			//		centroidC, sizeC)
+                    			
+                			} else if (numericalMeasure.equals("Classic")) {
+                				
+                				dissimilarity = this.calculateClassicDissimilarity(
+                    					centroidN, clusterAffiliation.get(n).size(), 
+                    					centroidM, clusterAffiliation.get(m).size());
+                				
+                			} else {
+                				throw new NodeException("Error classifying data with the WardAdapter: The numerical measure couldn't be identified");
+                			}
+                			
+                			dissimilarityMatrix[n][m] = dissimilarity;
                 		}
                 	}
             	}
@@ -192,9 +226,29 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
                     			dMatrixTwo[n][m] = dMatrixTwo[m][n];
                     		} else {
                     			
-                    			double[] centroid = this.calculateCentroid(m, n, allValues, clusterAffiliation);
-                    			double ess = this.calculateESS();
-                    			dMatrixTwo[n][m] = ess;
+                    			double dissimilarity = 0.0;
+                    			double[] centroidN = this.calculateCentroid(allValues, clusterAffiliation.get(n));
+                				double[] centroidM = this.calculateCentroid(allValues, clusterAffiliation.get(m));
+                				
+                    			if (numericalMeasure.equals("LWDissimilarityUpdateFormula")) {
+                    				
+                    				// TODO
+                    				//dissimilarity = this.calculateLWDissimilarity(
+                        			//		centroidN, clusterAffiliation.get(n).size(), 
+                        			//		centroidM, clusterAffiliation.get(m).size(), 
+                        			//		centroidC, sizeC)
+                        			
+                    			} else if (numericalMeasure.equals("Classic")) {
+                    				
+                    				dissimilarity = this.calculateClassicDissimilarity(
+                        					centroidN, clusterAffiliation.get(n).size(), 
+                        					centroidM, clusterAffiliation.get(m).size());
+                    				
+                    			} else {
+                    				throw new NodeException("Error classifying data with the WardAdapter: The numerical measure couldn't be identified");
+                    			}
+                    			
+                    			dMatrixTwo[n][m] = dissimilarity;
                     		}
                     	}
                 	}
@@ -243,16 +297,55 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
             	}
             }
             
-        	// NOW THERE ARE (HAVE TO BE) ONLY THE NUMBER OF DESIRED CLUSTERS LEFT
-        	// SAVE
-    		String outputPath = AmusePreferences.get(KeysStringValue.AMUSE_PATH) + File.separator + "experiments" + File.separator;
-            // save to (outputPath + "Ward_Result.arff")
     		
-    		// Write Dendogram
+    		//-----------------------------------------------------------------------------------------------------------------------------
+        	// (5) SAVE
+        	//-----------------------------------------------------------------------------------------------------------------------------
+    		String outputPath = AmusePreferences.get(KeysStringValue.AMUSE_PATH) + File.separator + "experiments" + File.separator;
+    		
+    		DataSet amuseDataSet = new DataSet("WardResult_DataSet");
+    		
+    		// TODO - Eventuell muss x und x < ... angepasst werden.
+    		for (int x=0; x < numberOfFeatures; x++ ) {
+    			List<Double> featureXList = new ArrayList<Double>();
+    			
+    			for (int i=0; i < numberOfSongs; i++) {
+    				featureXList.add(allValues[i][x]);
+    			}
+    			
+    			Attribute featureX = new NumericAttribute( dataSetToClassify.getAttribute(x).getName() , featureXList);
+    			amuseDataSet.addAttribute(featureX);
+    			
+    		}
+    		for (int c=0; c < clusterAffiliation.size(); c++ ) {
+    			List<Double> clusterCList = new ArrayList<Double>();
+    			
+    			for (int i=0; i < numberOfSongs; i++) {
+    				
+    				if (clusterAffiliation.get(c).contains(i)) {
+    					clusterCList.add(i, 1.0);
+    				} else {
+    					clusterCList.add(i, 0.0);
+    				}
+    			}
+    			
+    			Attribute clusterX = new NumericAttribute("cluster_" + c, clusterCList);
+    			amuseDataSet.addAttribute(clusterX);
+    		}
+    		
+    		// Give the amuseDataSet to the ClassificationConfiguration so it may be put together and saved there
+        	// The ClassifierNodeScheduler proceedTask(...) returns or saves an ArrayList<ClassifiedSongPartitionsDescription>
+            ((ClassificationConfiguration)(this.correspondingScheduler.getConfiguration())).setInputToClassify(new DataSetInput(amuseDataSet));
+    		amuseDataSet.saveToArffFile(new File(outputPath + "Ward_Result.arff"));
+    		
+    		// Show the Dendogram in the AMUSE logger
+    		AmuseLogger.write("WardAdapter", Level.DEBUG, "Printing the dendogramm:");
+    			dendo.showClusters();
+    		// Save Dendogram print as .text
     		File dendogramFile = new File(outputPath + "Ward_DENDOGRAM.txt");
-    		BufferedWriter fileWriter = new BufferedWriter(new FileWriter(dendogramFile));
-    		fileWriter.append( dendo.printClusters() );
-    		fileWriter.close();
+    			BufferedWriter fileWriter = new BufferedWriter(new FileWriter(dendogramFile));
+    			fileWriter.append( dendo.printClusters() );
+    			fileWriter.close();
       
         } catch(Exception e) {
 			throw new NodeException("Error classifying data with the WardAdapter: " + e.getMessage());
@@ -289,8 +382,78 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
     	return minResult;
 	}
 	
-	/** Calculates the centroid for the Cluster (Cluster m unified Cluster n) */
-	private double[] calculateCentroid (int m, int n, double[][] allValues, List<List<Integer>> clusterAffiliation) {
+	
+	/**
+	 * Calculates the dissimilarity using the centroid of clusters
+	 * ClusterA and ClusterB are the ones to be merged 
+	 * 
+	 * @param centroidA = Centroid of ClusterA (One of the two to be merged)
+	 * @param sizeA = Cardinality (size) of ClsuterA
+	 * @param centroidB = Centroid of ClusterB (One of the two to be merged)
+	 * @param sizeB = Cardinality (size) of ClsuterB
+	 * 
+	 * @return A double containing the calculated dissimilarity with the classic Ward criterion
+	 */
+	private double calculateClassicDissimilarity (double[] centroidA, int sizeA, double[] centroidB, int sizeB) {
+		double cardinality = (sizeA * sizeB) / (sizeA + sizeB);
+		double distanceMeasure = this.d(centroidA, centroidB);
+		return cardinality * distanceMeasure;
+	}
+	
+	/**
+	 * Calculates the dissimilarity using the centroid of clusters
+	 * ClusterA and ClusterB are the ones to be merged and ClusterC is the "old" reference so the increase can be determined as dissimilarity
+	 * 
+	 * @param centroidA = Centroid of ClusterA (One of the two to be merged)
+	 * @param sizeA = Cardinality (size) of ClsuterA
+	 * @param centroidB = Centroid of ClusterB (One of the two to be merged)
+	 * @param sizeB = Cardinality (size) of ClsuterB
+	 * @param centroidC = Centroid of ClusterC (the reference cluster)
+	 * @param sizeC = Cardinality (size) of ClsuterC
+	 * 
+	 * @return A double containing the calculated dissimilarity with the Lance-Williams Dissimilarity Update Formula
+	 */
+	private double calculateLWDissimilarity (double[] centroidA, int sizeA, double[] centroidB, int sizeB, double[] centroidC, int sizeC) {
+		double alphaFirst = (sizeA + sizeC) / (sizeA + sizeB + sizeC);
+		alphaFirst = alphaFirst * this.d(centroidA, centroidC);
+		
+		double alphaSecond = (sizeB + sizeC) / (sizeA + sizeB + sizeC);
+		alphaSecond = alphaSecond * this.d(centroidB, centroidC);
+		
+		double beta = (sizeC) / (sizeA + sizeB + sizeC);
+		beta = beta * this.d(centroidA, centroidB);
+		
+		return alphaFirst + alphaSecond - beta;
+	}
+	
+	
+	/**
+	 * Calculates the distance between to centroids (double[])
+	 * @param centroidA
+	 * @param centroidB
+	 * @return A double value containing the distance of the given centroids
+	 */
+	private double d (double[] centroidA, double[] centroidB) {
+		
+		double distanceMeasure = 0.0;
+		
+		// Using the squared euclidean distance as distance measure
+		for(int x=0; x < centroidA.length; x ++) {
+			double difference = centroidA[x] - centroidB[x];
+			distanceMeasure += difference * difference;
+		}
+		
+		return distanceMeasure;		
+	}
+		
+	
+	/** 
+	 * Calculates the centroid for one Cluster
+	 * @param allValues = Matrix which contains for each song and every feature the corresponding value
+	 * @param cluster = The cluster (List<Integer>) which centroid should be calculated
+	 * @return An array of doubles which contains for every feature (index) the value of the centroid 
+	 */
+	private double[] calculateCentroid (double[][] allValues, List<Integer> cluster) {
 		
 		double[] centroid = new double[allValues[0].length];
 		
@@ -298,26 +461,16 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
 		for (int z=0; z < centroid.length; z++) {
 			centroid[z] = 0;
 			
-			// Nimm von jedem Song in Cluster m den Wert von Feature z und addiere ihn zum centroid[z] hinzu
-			for (int i=0; i < clusterAffiliation.get(m).size(); i++) {
-				int currentSongID = (int) clusterAffiliation.get(m).get(i);
+			// Nimm von jedem Song im Cluster den Wert von Feature z und addiere ihn zum centroid[z] hinzu
+			for (int i=0; i < cluster.size(); i++) {
+				int currentSongID = (int) cluster.get(i);
 				centroid[z] += allValues[currentSongID][z];
 			}
-			// Nimm von jedem Song in Cluster n den Wert von Feature z und addiere ihn zum centroid[z] hinzu
-			for (int i=0; i < clusterAffiliation.get(n).size(); i++) {
-				int currentSongID = (int) clusterAffiliation.get(n).get(i);
-				centroid[z] += allValues[currentSongID][z];
-			}
-			centroid[z] = centroid[z] / (clusterAffiliation.get(m).size() + clusterAffiliation.get(n).size());
+			centroid[z] = centroid[z] / cluster.size();
 		}
 		
 		return centroid;
 	}
 	
-	// TODO
-	private double calculateESS () {
-		
-		return -1.0;
-	}
 
 }
