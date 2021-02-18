@@ -145,7 +145,7 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
         	AmuseLogger.write("WardAdapter", Level.DEBUG, "The cluster affiliation has " +clusterAffiliation.size()+ " Cluster-lists.");
         	
         	Dendogram dendo = new Dendogram(clusterAffiliation);
-        	//dendo.showClusters();
+        	dendo.showClusters();
         	
         	
         	
@@ -256,17 +256,24 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
             			" with n=" +dissimilarityMatrixMinValues[0]+ " and m=" +dissimilarityMatrixMinValues[1]);
             	
             	// Merge clusters
-            	List<Integer> clusterToBeMergedInto = clusterAffiliation.get((int) dissimilarityMatrixMinValues[1]);
-            	List<Integer> clusterToBeAnnexed = clusterAffiliation.get((int) dissimilarityMatrixMinValues[0]);
+            	List<Integer> clusterToBeMergedA = clusterAffiliation.get((int) dissimilarityMatrixMinValues[1]);
+            	List<Integer> clusterToBeMergedB = clusterAffiliation.get((int) dissimilarityMatrixMinValues[0]);
+            	List<Integer> mergedCluster = new ArrayList<Integer>();
+            	mergedCluster.addAll(clusterToBeMergedA);
+            	mergedCluster.addAll(clusterToBeMergedB);
             	
             	try {
-            		dendo.setNewMerge(clusterToBeMergedInto, clusterToBeAnnexed);
+            		AmuseLogger.write("WardAdapter", Level.DEBUG, "Attemting to merge" + dendo.integerListToString(clusterToBeMergedA) +
+            				" and" + dendo.integerListToString(clusterToBeMergedB));
+            		dendo.setNewMerge(clusterToBeMergedA, clusterToBeMergedB, mergedCluster);
+            		dendo.showClusters();
             	} catch (Exception e) {
         			AmuseLogger.write("WardAdapter", Level.WARN, "The dendogram coudn't set a new merge: " + e.getMessage());
         		}
             	
-            	clusterToBeMergedInto.addAll(clusterToBeAnnexed);
-            	clusterAffiliation.remove((int) dissimilarityMatrixMinValues[0]);
+            	clusterAffiliation.add(mergedCluster);
+            	clusterAffiliation.remove(clusterToBeMergedA);
+            	clusterAffiliation.remove(clusterToBeMergedB);
             	
             	//-----------------------------------------------------------------------------------------------------------------------------
             	// (4) Für das ähnlichste Clusterpaar:
@@ -287,11 +294,11 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
                 			
                 			// Falls es sich um dasselbe Cluster handelt, wird der Wert in der Matirx auf 0 gesetzt
                     		if (n == m) {
-                    			dMatrixTwo[n][m] = 0.0;
+                    			dMatrixTwo[m][n] = 0.0;
                     		} 
                     		// Falls die MatrixDiagonale überschritten wird doppeln sich die Werte und werden aus Effizenzgründen nicht erneut berechnet
                     		else if (n < m) {
-                    			dMatrixTwo[n][m] = dMatrixTwo[m][n];
+                    			dMatrixTwo[m][n] = dMatrixTwo[n][m];
                     		} else {
                     			
                     			double dissimilarity = 0.0;
@@ -316,47 +323,59 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
                     				throw new NodeException("Error classifying data with the WardAdapter: The numerical measure couldn't be identified");
                     			}
                     			
-                    			dMatrixTwo[n][m] = dissimilarity;
+                    			dMatrixTwo[m][n] = dissimilarity;
                     		}
                     	}
                 	}
                 	
-                	
-                	AmuseLogger.write("WardAdapter", Level.DEBUG, dMatrixTwo.toString());
                 	
                 	// Get the next minimum and the corresponding m and n values of the new dMatrixTwo
                 	double[] dMatrixTwoMinValues = calculateMininimum(dMatrixTwo);
                 	
                 	
                 	// Does the next best merge contain the just merged cluster?
-                	// Yes: Merge the third cluster into it, too, an continue to the next iteration.
-                	if (clusterToBeMergedInto.equals(clusterAffiliation.get((int) dMatrixTwoMinValues[0])) ) {
+                	// Yes: Merge the third cluster into it, too, and continue to the next iteration.
+                	if (clusterToBeMergedA.equals(clusterAffiliation.get((int) dMatrixTwoMinValues[0])) 
+                			|| clusterToBeMergedB.equals(clusterAffiliation.get((int) dMatrixTwoMinValues[0])) ) {
                 		
-                		clusterToBeAnnexed = clusterAffiliation.get((int) dMatrixTwoMinValues[1]);
+                		List<Integer> clusterToBeMergedC = clusterAffiliation.get((int) dMatrixTwoMinValues[1]);
+                		List<Integer> BigMergedCluster = new ArrayList<Integer>();
+                    	mergedCluster.addAll(mergedCluster);
+                    	mergedCluster.addAll(clusterToBeMergedC);
                 		
                 		try {
-                    		dendo.setNewMerge(clusterToBeMergedInto, clusterToBeAnnexed);
+                			AmuseLogger.write("WardAdapter", Level.DEBUG, "Attemting to merge" + dendo.integerListToString(mergedCluster) +
+                    				" and" + dendo.integerListToString(clusterToBeMergedC));
+                    		dendo.setNewMerge(mergedCluster, clusterToBeMergedC, BigMergedCluster);
+                    		dendo.showClusters();
                     	} catch (Exception e) {
                 			AmuseLogger.write("WardAdapter", Level.WARN, "The dendogram coudn't set a new merge: " + e.getMessage());
                 		}
                     	
-                    	clusterToBeMergedInto.addAll(clusterToBeAnnexed);
-                    	clusterAffiliation.remove((int) dissimilarityMatrixMinValues[1]);
+                		clusterAffiliation.add(BigMergedCluster);
+                    	clusterAffiliation.remove(mergedCluster);
+                    	clusterAffiliation.remove(clusterToBeMergedC);
                 		
-                	} else if (clusterToBeMergedInto.equals(clusterAffiliation.get((int) dMatrixTwoMinValues[1]))) {
+                	} else if (clusterToBeMergedA.equals(clusterAffiliation.get((int) dMatrixTwoMinValues[1])) 
+                			|| clusterToBeMergedB.equals(clusterAffiliation.get((int) dMatrixTwoMinValues[1])) ) {
                 		
-                		clusterToBeAnnexed = clusterAffiliation.get((int) dMatrixTwoMinValues[0]);
+                		List<Integer> clusterToBeMergedC = clusterAffiliation.get((int) dMatrixTwoMinValues[0]);
+                		List<Integer> BigMergedCluster = new ArrayList<Integer>();
+                    	mergedCluster.addAll(mergedCluster);
+                    	mergedCluster.addAll(clusterToBeMergedC);
                 		
                 		try {
-                    		dendo.setNewMerge(clusterToBeMergedInto, clusterToBeAnnexed);
+                			AmuseLogger.write("WardAdapter", Level.DEBUG, "Attemting to merge" + dendo.integerListToString(mergedCluster) +
+                    				" and" + dendo.integerListToString(clusterToBeMergedC));
+                    		dendo.setNewMerge(mergedCluster, clusterToBeMergedC, BigMergedCluster);
+                    		dendo.showClusters();
                     	} catch (Exception e) {
                 			AmuseLogger.write("WardAdapter", Level.WARN, "The dendogram coudn't set a new merge: " + e.getMessage());
                 		}
                     	
-                    	clusterToBeMergedInto.addAll(clusterToBeAnnexed);
-                    	clusterAffiliation.remove((int) dissimilarityMatrixMinValues[0]);
-                		
-                		
+                		clusterAffiliation.add(BigMergedCluster);
+                		clusterAffiliation.remove(mergedCluster);
+                    	clusterAffiliation.remove(clusterToBeMergedC);
                 	}
             	}
             	
@@ -365,17 +384,24 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
             	if (clusterAffiliation.size() == 2 &&
             			(k == 0 || k == 1)) {
             		
-            		clusterToBeMergedInto = clusterAffiliation.get(0);
-            		clusterToBeAnnexed = clusterAffiliation.get(1);
+            		List<Integer> firstCluster = clusterAffiliation.get(0);
+            		List<Integer> secondCluster = clusterAffiliation.get(1);
+            		List<Integer> lastCluster = new ArrayList<Integer>();
+            		lastCluster.addAll(firstCluster);
+            		lastCluster.addAll(secondCluster);
             		
             		try {
-                		dendo.setNewMerge(clusterToBeMergedInto, clusterToBeAnnexed);
+            			AmuseLogger.write("WardAdapter", Level.DEBUG, "Attemting to merge" + dendo.integerListToString(firstCluster) +
+                				" and" + dendo.integerListToString(secondCluster));
+                		dendo.setNewMerge(firstCluster, secondCluster, lastCluster);
+                		dendo.showClusters();
                 	} catch (Exception e) {
             			AmuseLogger.write("WardAdapter", Level.WARN, "The dendogram coudn't set a new merge: " + e.getMessage());
             		}
                 	
-                	clusterToBeMergedInto.addAll(clusterToBeAnnexed);
-                	clusterAffiliation.remove(1);
+            		clusterAffiliation.add(lastCluster);
+                	clusterAffiliation.remove(firstCluster);
+                	clusterAffiliation.remove(secondCluster);
             		
             	} else if (clusterAffiliation.size() < 1) {
             		throw new NodeException("WardAdapter - classify(): Somehow there aren't ANY clusters. What did you do?");
@@ -426,7 +452,7 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
     		
     		// Show the Dendogram in the AMUSE logger
     		AmuseLogger.write("WardAdapter", Level.DEBUG, "Printing the dendogramm:");
-    			//dendo.showClusters();
+    		dendo.showClusters();
     		// Save Dendogram print as .text
     		File dendogramFile = new File(outputPath + "Ward_DENDOGRAM.txt");
     			BufferedWriter fileWriter = new BufferedWriter(new FileWriter(dendogramFile));
@@ -481,16 +507,10 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
 	 * @return A double containing the calculated dissimilarity with the classic Ward criterion
 	 */
 	private double calculateClassicDissimilarity (double[] centroidA, double sizeA, double[] centroidB, double sizeB) {
+		
 		double cardinality = (sizeA * sizeB) / (sizeA + sizeB);
-		//AmuseLogger.write("WardAdapter - calculateClassicDissimilarity()", Level.DEBUG, "Calculating cardinality: "
-		//		+"("+sizeA+"*"+sizeB+") / ("+sizeA+"+"+sizeB+") = "+cardinality);
-		
 		double distanceMeasure = this.d(centroidA, centroidB);
-		//AmuseLogger.write("WardAdapter - calculateClassicDissimilarity()", Level.DEBUG, "Calculating distanceMeasure: "
-		//		+"this.d(centroidA, centroidB) ="+distanceMeasure);
-		
 		double result = cardinality * distanceMeasure;
-		AmuseLogger.write("WardAdapter - calculateClassicDissimilarity()", Level.DEBUG, "Returning the double " + result);
 		return result;
 		
 	}
