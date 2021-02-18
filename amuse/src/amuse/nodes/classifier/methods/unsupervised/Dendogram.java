@@ -34,23 +34,29 @@ public class Dendogram {
 	 */
 	public void setNewMerge (List<Integer> inputClusterA, List<Integer> inputClusterB) throws NodeException {
 		
+		if (inputClusterA.equals(null) || inputClusterB.equals(null)) {
+			throw new NodeException ("Dendogram - setNewMerge(): At least one of the given iput cluster lists was null.");
+		}
+		
 		// Search the input clusters in the own List clusters
 		Node clusterA = null, clusterB = null;
 		for (int c=0; c < clusters.size(); c++) {
-			if (clusters.get(c).equals(inputClusterA)) {
+			if (clusters.get(c).getValue().equals(inputClusterA)) {
 				clusterA = clusters.get(c);
-			} else if (clusters.get(c).equals(inputClusterB)) {
+			} else if (clusters.get(c).getValue().equals(inputClusterB)) {
 				clusterB = clusters.get(c);
 			}
 		}
 		
 		// Check if the input clusters couldn't be found in the own List clusters
 		if (clusterA.equals(null) || clusterB.equals(null)) {
-			throw new NodeException ("Couldn't find the clusters to merge in the dendograms own cluster list.");
+			throw new NodeException ("Dendogram - setNewMerge(): Couldn't find the clusters to merge in the dendograms own cluster list.");
 		} else {
 			
 			List<Integer> parentValue = new ArrayList<Integer>();
-			parentValue = clusterA.getValue();
+			for (int v=0; v<clusterA.getValue().size(); v++) {
+				parentValue.add(clusterA.getValue().get(v));
+			}
 			parentValue.addAll(clusterB.getValue());
 			
 			Node parent = new Node(parentValue, clusterA, clusterB);
@@ -99,7 +105,10 @@ public class Dendogram {
 		if (depth > 1) {
 			
 			// Get the line to the left child
-				List<Integer> rightDiffLeft = new ArrayList<Integer>(rightDiff);
+				List<Integer> rightDiffLeft = new ArrayList<Integer>();
+					for (int v=0; v < rightDiff.size(); v++) {
+						rightDiffLeft.add(rightDiff.get(v));
+					}
 				int leftDepthDiff = currentValue.size() - current.getLeft().getValue().size();
 				rightDiffLeft.add(-leftDepthDiff);
 			String leftNodeString =  this.showNode(current.getLeft(), rightDiffLeft);
@@ -120,7 +129,10 @@ public class Dendogram {
 			
 			
 			// Get the line to the right child
-				List<Integer> rightDiffRight = new ArrayList<Integer>(rightDiff);
+				List<Integer> rightDiffRight = new ArrayList<Integer>();
+					for (int v=0; v < rightDiff.size(); v++) {
+						rightDiffRight.add(rightDiff.get(v));
+					}
 				int rightDepthDiff = currentValue.size() - current.getRight().getValue().size();
 				rightDiffRight.add(rightDepthDiff);
 			String rightNodeString = this.showNode(current.getRight(), rightDiffRight);
