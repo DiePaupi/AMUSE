@@ -218,7 +218,7 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
                     			
                 			} else if (numericalMeasure.equals("Classic")) {
                 				
-                				AmuseLogger.write("WardAdapter", Level.DEBUG, "Using the classical method: ward's criterion.");
+                				//AmuseLogger.write("WardAdapter", Level.DEBUG, "Using the classical method: ward's criterion.");
                 				
                 				dissimilarity = this.calculateClassicDissimilarity(
                     					centroidN, clusterAffiliation.get(n).size(), 
@@ -232,8 +232,8 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
                 				AmuseLogger.write("WardAdapter", Level.WARN, "The dissimilarity wasn't calculated correctly!");
                 			}
                 			dissimilarityMatrix[m][n] = dissimilarity;
-                			AmuseLogger.write("WardAdapter", Level.DEBUG, "The dissimilarity for n=" +n+ " and m=" +m+
-                					" is " +dissimilarity);
+                			//AmuseLogger.write("WardAdapter", Level.DEBUG, "The dissimilarity for n=" +n+ " and m=" +m+
+                			//		" is " +dissimilarity);
                 		}
                 	}
             	}
@@ -253,8 +253,8 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
             	// Get the minimum and the corresponding m and n values
             	double[] dissimilarityMatrixMinValues = calculateMininimum (dissimilarityMatrix);
             	
-            	AmuseLogger.write("WardAdapter", Level.DEBUG, "The minimum dissimilarity value is " +dissimilarityMatrixMinValues[2]+
-            			" with n=" +dissimilarityMatrixMinValues[0]+ " and m=" +dissimilarityMatrixMinValues[1]);
+            	//AmuseLogger.write("WardAdapter", Level.DEBUG, "The minimum dissimilarity value is " +dissimilarityMatrixMinValues[2]+
+            	//		" with n=" +dissimilarityMatrixMinValues[0]+ " and m=" +dissimilarityMatrixMinValues[1]);
             	
             	// Merge clusters
             	List<Integer> clusterToBeMergedA = clusterAffiliation.get((int) dissimilarityMatrixMinValues[1]);
@@ -588,23 +588,4 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
 		return centroid;
 	}
 	
-	
-	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	/** Internal Tuple Class -  works like a node any tuple */
-	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	public class idAndName {
-		int id;
-		String name;
-		
-		private idAndName (int id, String name) {
-			this.id = id;
-			this.name = name;
-		}
-		
-		public int getID () {return this.id;}
-		public String getName () {return this.name;}
-		private void setID (int id) {this.id = id;}
-		private void setName (String name) {this.name = name;}
-	}
-
 }
