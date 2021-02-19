@@ -84,7 +84,7 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
         	
         	int numberOfSongs = descriptionOfClassifierInput.size();
         	// TODO - Wert eventuell -1 wegen Id oder so
-        	int numberOfFeatures = dataSetToClassify.getAttributeCount(); 
+        	int numberOfFeatures = dataSetToClassify.getAttributeCount();
         	
         	if (k < 0 || k >= numberOfSongs) {
         		throw new NodeException("WardAdapter - classify(): Your given k wasn't in range. "
@@ -100,11 +100,16 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
         	
         	/** allValues contains for each song every feature value based on descriptionOfClassifierInput - [songID][featureValuesOfOneSong] */
     		double[][] allValues = new double[numberOfSongs][numberOfFeatures];
+    		List<idAndName> songIdsAndNames = new ArrayList<idAndName>();
     		
     		// Bilde den Durchschnitt (TODO oder Median) aller Partitionswerte
     		int partitionsAlreadySeen = 0;
     		for (int i=0; i < numberOfSongs; i++) {
+    			
     			int numberOfPartitionsForSongI = descriptionOfClassifierInput.get(i).getStartMs().length;
+    			// Save the song path with it's id
+    			idAndName current = new idAndName(i, descriptionOfClassifierInput.get(i).getPathToMusicSong());
+    			songIdsAndNames.add(current);
     			
     			for (int j= partitionsAlreadySeen; j < partitionsAlreadySeen+numberOfPartitionsForSongI; j++) {
     				for (int x=0; x < numberOfFeatures; x++) {
@@ -112,14 +117,10 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
     				}
     			}
     			for (int x=0; x < numberOfFeatures; x++) {
-    				//AmuseLogger.write("WardAdapter", Level.DEBUG, "allValues[" +i+ "][" +x+ "] = " + allValues[i][x] +
-    				//		" and it will be divided by " +numberOfPartitionsForSongI);
 					allValues[i][x] = allValues[i][x] / numberOfPartitionsForSongI;
 				}
     			
     			partitionsAlreadySeen += numberOfPartitionsForSongI;
-    			//AmuseLogger.write("WardAdapter", Level.DEBUG, partitionsAlreadySeen+ " partitions out of "+ 
-    			//		dataSetToClassify.getValueCount() +" have already been seen.");
     		}
     		
     		//Debug
@@ -144,7 +145,7 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
         	}
         	AmuseLogger.write("WardAdapter", Level.DEBUG, "The cluster affiliation has " +clusterAffiliation.size()+ " Cluster-lists.");
         	
-        	Dendogram dendo = new Dendogram(clusterAffiliation);
+        	Dendogram dendo = new Dendogram(clusterAffiliation, songIdsAndNames);
         	dendo.showClusters();
         	
         	
@@ -587,5 +588,23 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
 		return centroid;
 	}
 	
+	
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	/** Internal Tuple Class -  works like a node any tuple */
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	public class idAndName {
+		int id;
+		String name;
+		
+		private idAndName (int id, String name) {
+			this.id = id;
+			this.name = name;
+		}
+		
+		public int getID () {return this.id;}
+		public String getName () {return this.name;}
+		private void setID (int id) {this.id = id;}
+		private void setName (String name) {this.name = name;}
+	}
 
 }

@@ -1,11 +1,13 @@
 package amuse.nodes.classifier.methods.unsupervised;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.log4j.Level;
 
 import amuse.interfaces.nodes.NodeException;
+import amuse.nodes.classifier.methods.unsupervised.WardAdapter.idAndName;
 import amuse.util.AmuseLogger;
 
 public class Dendogram {
@@ -16,11 +18,12 @@ public class Dendogram {
 	 * Creates a Dendogram (Tree like structure) for hierarchical clustering
 	 * @param input = A List of Lists<Integer> which each contain the SongIDs belonging to a cluster
 	 */
-	public Dendogram (List<List<Integer>> input) {
+	public Dendogram (List<List<Integer>> clusterInput, List<idAndName> songIdsAndNames) {
 		
 		clusters = new ArrayList<Node>();
-		for (int c=0; c < input.size(); c++) {
-			Node current = new Node(""+c, input.get(c), null, null);
+		
+		for (int c=0; c < clusterInput.size(); c++) {
+			Node current = new Node(""+c, songIdsAndNames.get(c).getName(), clusterInput.get(c), null, null);
 			clusters.add(c, current);
 		}
 	}
@@ -57,7 +60,8 @@ public class Dendogram {
 			parentValue.addAll(inputMergedCluster);
 			
 			String parentID = clusterA.getID() + "+" + clusterB.getID() +";";
-			Node parent = new Node(parentID, parentValue, clusterA, clusterB);
+			String parentName = clusterA.getName() + "\n" + clusterB.getName();
+			Node parent = new Node(parentID, parentName, parentValue, clusterA, clusterB);
 			clusterA.setParent(parent);
 			clusterB.setParent(parent);
 			
@@ -69,6 +73,7 @@ public class Dendogram {
 					" and" +this.integerListToString(clusterB.getValue()) + " have been merged into" + this.integerListToString(parentValue));
 		}
 	}
+	
 	
 	/** @return A List of Nodes which each contain a cluster */
 	public List<Node> getClusters () {return this.clusters;}
@@ -83,133 +88,154 @@ public class Dendogram {
 		AmuseLogger.write("DENDOGRAM", Level.DEBUG, "FINISHED TO SHOW DENDOGRAM");
 	}
 	
+	
 	/** @return The Dendogram as String */
 	public String printClusters() {
 		
 		String result = "";
+		
 		if (clusters.size() > 0) {
+			
+			// ----------------------------------------------------------------------------------------------------------------------------------------
+			// Get the dendogram of all clusters
+			// ----------------------------------------------------------------------------------------------------------------------------------------
+			
+			// Get the max dendogram hight
+			int maxHightOfAllClusters = 0;
+			for (int c=0; c < clusters.size(); c++) {
+				maxHightOfAllClusters = Math.max(maxHightOfAllClusters, this.findHeight(clusters.get(c)));
+			}
+			
+			// Create a dendogram array for all clusters
+			String[][] dendogramMatrix = new String[maxHightOfAllClusters][clusters.size() + (clusters.size() -1)];
+			int[][] dendogramLengths = new int[maxHightOfAllClusters][clusters.size() + (clusters.size() -1)];
+			int currentRow = 0;
+			
+			// Get the dendograms for every cluster and fill them into the big one
 			for (int c=0; c < clusters.size(); c++) {
 				Node current = clusters.get(c);
-				result = result + this.showNode(current, new ArrayList<Integer>())  + "\n \n";
+				
+				// Get the cluster specific dendogram array
+				int maxHightofThisCluster = this.findHeight(current);
+				String[][] outputStrings = new String[maxHightofThisCluster][current.getValue().size()];
+				int[][] outputLengths = new int[maxHightofThisCluster][current.getValue().size()];
+				this.fillOutputArray(outputStrings, outputLengths, maxHightofThisCluster, current.getValue().size(), current);
+				
+				// Transfer the cluster dendogram array into the big one
+				for (int s=0; s < outputStrings.length; s++) {
+					for (int z=0; z < outputStrings[0].length; z ++) {
+						dendogramMatrix[s][z + currentRow] = outputStrings[s][z];
+						dendogramLengths[s][z + currentRow] = outputLengths[s][z];
+					}
+				}
+				
+				// Set the new row to start for the next cluster but with an empty row so it looks more structured
+				currentRow += output[0].length +1;
+			}
+			// Get the dendogram array as string and add it to the result string
+			this.makeMatrixPretty(dendogramMatrix, dendogramLengths);
+			result += this.getArrayAsString(dendogramMatrix) + "\n \n";
+			
+			// Get the ids and song names of all leafs at the end
+			result += "The song ids in the dendogram correspond to: \n \n";
+			for (int c=0; c < clusters.size(); c++) {
+				Node current = clusters.get(c);
+				result += this.showNamesOfClusterSongs(current);
 			}
 		}
+		
 		return result;
 	}
 	
-	private String showNode(Node current, List<Integer> rightDiff) {
-		String resultString = "";
-		if (current != null) {
-			
-			List<Integer> currentValue = current.getValue();
-			int depth = currentValue.size();
-			
-			AmuseLogger.write("DENDOGRAM - showNode()", Level.DEBUG, "I was called upon with the current node (ID = " + current.getID() + ") " +
-					this.integerListToString(currentValue) + " at the size of " + depth + 
-					" and the difference list" + this.integerListToString(rightDiff));
-			
-			// ----------------------------------------------------------------------------------------------------------------------------------------
-			// IF THIS IS NOT A SINGLE-SONG-CLUSTER-NODE
-			// ----------------------------------------------------------------------------------------------------------------------------------------
-			if (depth > 1) {
-				
-				// ------------------------------------------------------------------------------------------------------------------------------------
-				// Get the left child
-				// ------------------------------------------------------------------------------------------------------------------------------------
-				
-				// Copy the list of differences
-				List<Integer> rightDiffLeft = new ArrayList<Integer>();
-					for (int v=0; v < rightDiff.size(); v++) {
-						rightDiffLeft.add(rightDiff.get(v));
-					}
-					
-				String leftNodeString = "";
-				if (current.getLeft() == null ) {
-					AmuseLogger.write("DENDOGRAM", Level.WARN, "The current node (ID = " + current.getID() + 
-							")" + this.integerListToString(currentValue) + " has no left child.");
-				} else {
-					// Get the difference from this node to the left child and save it in the list as negative (because left child)
-					int leftDepthDiff = depth - current.getLeft().getValue().size();
-					rightDiffLeft.add(-leftDepthDiff);
-					
-					// Recursive call for the left child
-					leftNodeString =  this.showNode(current.getLeft(), rightDiffLeft);
-					
-					// That " ---i"-Part which is half as wide as the node below (but filled to full width with ' ')
-					String end = this.getOnePlacer(depth, '-', 'i');
-					
-					// Add spaces and nice |s
-					String addSpace = "";
-					//for (int i = rightDiffLeft.size()-1; i >= 0; i--) {
-					//	addSpace += this.getPropperPlacer(Math.abs(rightDiffLeft.get(i)), depth, ' ');
-					//	if (rightDiffLeft.get(i) < 0) {
-					//		addSpace += this.getOnePlacer(depth, ' ', ' ');
-					//	} else {
-					//		addSpace += this.getOnePlacer(depth, ' ', '|');
-					//	}
-					//}
-					
-					leftNodeString += end + addSpace;
-				}
-				
-				
-				// ------------------------------------------------------------------------------------------------------------------------------------
-				// Get the right child
-				// ------------------------------------------------------------------------------------------------------------------------------------
-				
-				// Copy the list of differences
-				List<Integer> rightDiffRight = new ArrayList<Integer>();
-					for (int v=0; v < rightDiff.size(); v++) {
-						rightDiffRight.add(rightDiff.get(v));
-					}
-				
-				String rightNodeString = "";
-				if (current.getRight() == null) {
-					AmuseLogger.write("DENDOGRAM", Level.WARN, "The current node (ID = " + current.getID() + 
-							")" + this.integerListToString(currentValue) + " has no right child.");
-				} else {
-					// Get the difference from this node to the right child and save it in the list as positive (because right child)
-					int rightDepthDiff = depth - current.getRight().getValue().size();
-						rightDiffRight.add(rightDepthDiff);
-						
-					// Recursive call for the right child
-					rightNodeString = this.showNode(current.getRight(), rightDiffRight);
-				}
-				
-				
-				// ------------------------------------------------------------------------------------------------------------------------------------
-				// Get the this node
-				// ------------------------------------------------------------------------------------------------------------------------------------
-			
-				// Set the ResultString
-				resultString += leftNodeString + "\n" + rightNodeString + this.integerListToString(currentValue);
-			
-				// If this is the left child of some other node: Add placer to the right
-				//if (current.getParent() != null) {
-				//	int LeftDifferenceInDepth = current.getParent().getValue().size() - current.getValue().size();
-				//	String propperPlacer = this.getPropperPlacer(LeftDifferenceInDepth, depth, '-');
-				//	propperPlacer = propperPlacer + this.getOnePlacer(depth, '-', 'i');
-				//
-				//	resultString += propperPlacer;
-				//}
+	
+	private void fillOutputArray (String[][] output, int[][] lengths, int column, int row, Node currentNode) {
 		
-			} 
-			// ----------------------------------------------------------------------------------------------------------------------------------------
-			// IF THIS IS A SINGLE-SONG-CLUSTER-NODE
-			// ----------------------------------------------------------------------------------------------------------------------------------------
-			else {
+		if (currentNode != null && output != null) {
 			
-				// Print a fitting length of fillers to the right
-				String propperPlacer = "";
-				if (current.getParent() != null) {
-					int differenceInDepth = current.getParent().getValue().size() - current.getValue().size();
-					propperPlacer = this.getPropperPlacer(differenceInDepth, depth, '-');
-				}
+			// Fill corresponding table entry for this node
+			output[column][row] = this.integerListToString(currentNode.getValue());
+			lengths[column][row] = currentNode.getValue().size();
+			
+			if (currentNode.getLeft() != null && currentNode.getRight() != null) {
 				
-				resultString = this.integerListToString(currentValue) + propperPlacer;
+				// Tell the left child that it should fill out its table entry
+				int rowsToLeaveFree = currentNode.getValue().size() - currentNode.getRight().getValue().size();
+				this.fillOutputArray(output, lengths, column-1, row - rowsToLeaveFree, currentNode.getLeft());
+			
+				// Tell the right child that it should fill out its table entry
+				this.fillOutputArray(output, lengths, column-1, row, currentNode.getRight());
 			}
-		
 		}
-		return resultString;
+	}
+	
+	
+	private void makeMatrixPretty (String[][] matrix, int[][] lengths) {
+		
+		for (int s=0; s < matrix.length; s++) {
+			
+			// Get the maximal char count in this column
+			int maxLengthOfThisColumn = matrix[s][0].length();
+			for (int z=0; z < matrix[0].length; z++) {
+				if (matrix[s][z] != null) {
+					if (matrix[s][z].length() > maxLengthOfThisColumn) {
+						maxLengthOfThisColumn = matrix[s][z].length();
+					}
+				}
+			}
+			
+			for (int z=0; z < matrix[0].length; z++) {
+				
+				// Get this entrys char count
+				if (matrix[s][z] != null) {
+					int thisEntrysCharCount = matrix[s][z].length();
+					
+					// for every char of difference add two spaces before the actual string
+					String thisEntrysString = matrix[s][z];
+					for (int l=0; l < maxLengthOfThisColumn - thisEntrysCharCount; l ++) {
+						thisEntrysString = "  " + thisEntrysString;
+					}
+					
+					thisEntrysString += " -- ";
+				}
+			}
+		}
+	}
+	
+	
+	/**
+	 * @param currentNode
+	 * @return A String listing all the leaf nodes with their id and then their name (path)
+	 */
+	private String showNamesOfClusterSongs (Node currentNode) {
+		
+		String result = "";
+		if (currentNode != null) {
+			
+			int depth = currentNode.getValue().size();
+			if (depth == 1) {
+				result += currentNode.getID() + ": " + currentNode.getName() + "\n";
+			} else {
+				
+				String leftChildNames = "";
+				if (currentNode.getLeft() == null) {
+					AmuseLogger.write("DENDOGRAM", Level.WARN, "The current node (ID = " + currentNode.getID() + 
+							")" + this.integerListToString(currentNode.getValue()) + " has no left child.");
+				} else {
+					leftChildNames = this.showNamesOfClusterSongs(currentNode.getLeft());
+				}
+				
+				String rightChildNames = "";
+				if (currentNode.getRight() == null) {
+					AmuseLogger.write("DENDOGRAM", Level.WARN, "The current node (ID = " + currentNode.getID() + 
+							")" + this.integerListToString(currentNode.getValue()) + " has no right child.");
+				} else {
+					rightChildNames = this.showNamesOfClusterSongs(currentNode.getRight());
+				}
+				result += leftChildNames + rightChildNames;
+			}
+		}
+		
+		return result;
 	}
 	
 	/**
@@ -283,18 +309,26 @@ public class Dendogram {
 	}
 	
 	
+	private int findHeight(Node node) {
+		  if (node == null) return 0;
+		  return 1 + Math.max(findHeight(node.getLeft()), findHeight(node.getRight()));
+		}
+	
+	
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	/** Internal Node Class -  works like a node in any tree */
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	private class Node {
-		String id;
-		List<Integer> value;
-		Node parent;
-		Node left;
-		Node right;
+		private String id;
+		private String name;
+		private List<Integer> value;
+		private Node parent;
+		private Node left;
+		private Node right;
 		
-		private Node (String id, List<Integer> value, Node left, Node right) {
+		private Node (String id, String name, List<Integer> value, Node left, Node right) {
 			this.id = id;
+			this.name = name;
 			this.value = value;
 			this.parent = null;
 			this.left = left;
@@ -302,14 +336,17 @@ public class Dendogram {
 		}
 		
 		private String getID () {return this.id;}
+		private String getName () {return this.name;}
 		private List<Integer> getValue () {return this.value;}
 		private Node getParent () {return this.parent;}
 		private Node getLeft () {return this.left;}
 		private Node getRight () {return this.right;}
 		private void setID (String id) {this.id = id;}
+		private void setName (String name) {this.id = name;}
 		private void setValue (List<Integer> value) {this.value = value;}
 		private void setParent (Node parent) {this.parent = parent;}
 		private void setLeft (Node left) {this.left = left;}
 		private void setRight (Node right) {this.right = right;}
 	}
+	
 }
