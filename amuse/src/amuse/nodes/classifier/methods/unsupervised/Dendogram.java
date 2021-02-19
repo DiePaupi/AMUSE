@@ -108,7 +108,6 @@ public class Dendogram {
 			
 			// Create a dendogram array for all clusters
 			String[][] dendogramMatrix = new String[maxHightOfAllClusters][clusters.size() + (clusters.size() -1)];
-			int[][] dendogramLengths = new int[maxHightOfAllClusters][clusters.size() + (clusters.size() -1)];
 			int currentRow = 0;
 			
 			// Get the dendograms for every cluster and fill them into the big one
@@ -118,23 +117,21 @@ public class Dendogram {
 				// Get the cluster specific dendogram array
 				int maxHightofThisCluster = this.findHeight(current);
 				String[][] outputStrings = new String[maxHightofThisCluster][current.getValue().size()];
-				int[][] outputLengths = new int[maxHightofThisCluster][current.getValue().size()];
-				this.fillOutputArray(outputStrings, outputLengths, maxHightofThisCluster, current.getValue().size(), current);
+				this.fillOutputArray(outputStrings, maxHightofThisCluster, current.getValue().size(), current);
 				
 				// Transfer the cluster dendogram array into the big one
 				for (int s=0; s < outputStrings.length; s++) {
 					for (int z=0; z < outputStrings[0].length; z ++) {
 						dendogramMatrix[s][z + currentRow] = outputStrings[s][z];
-						dendogramLengths[s][z + currentRow] = outputLengths[s][z];
 					}
 				}
 				
 				// Set the new row to start for the next cluster but with an empty row so it looks more structured
-				currentRow += output[0].length +1;
+				currentRow += outputStrings[0].length +1;
 			}
 			// Get the dendogram array as string and add it to the result string
-			this.makeMatrixPretty(dendogramMatrix, dendogramLengths);
-			result += this.getArrayAsString(dendogramMatrix) + "\n \n";
+			this.makeMatrixPretty(dendogramMatrix);
+			result += this.getMatrixAsString(dendogramMatrix) + "\n \n";
 			
 			// Get the ids and song names of all leafs at the end
 			result += "The song ids in the dendogram correspond to: \n \n";
@@ -148,57 +145,138 @@ public class Dendogram {
 	}
 	
 	
-	private void fillOutputArray (String[][] output, int[][] lengths, int column, int row, Node currentNode) {
+	private void fillOutputArray (String[][] output, int column, int row, Node currentNode) {
 		
 		if (currentNode != null && output != null) {
 			
 			// Fill corresponding table entry for this node
 			output[column][row] = this.integerListToString(currentNode.getValue());
-			lengths[column][row] = currentNode.getValue().size();
 			
 			if (currentNode.getLeft() != null && currentNode.getRight() != null) {
 				
 				// Tell the left child that it should fill out its table entry
 				int rowsToLeaveFree = currentNode.getValue().size() - currentNode.getRight().getValue().size();
-				this.fillOutputArray(output, lengths, column-1, row - rowsToLeaveFree, currentNode.getLeft());
+				this.fillOutputArray(output, column-1, row - rowsToLeaveFree, currentNode.getLeft());
 			
 				// Tell the right child that it should fill out its table entry
-				this.fillOutputArray(output, lengths, column-1, row, currentNode.getRight());
+				this.fillOutputArray(output, column-1, row, currentNode.getRight());
 			}
 		}
 	}
 	
 	
-	private void makeMatrixPretty (String[][] matrix, int[][] lengths) {
+	private String getMatrixAsString (String[][] matrix) {
+		String result = "";
 		
+		// TODO
+		
+		return result;
+	}
+	
+	
+	private void makeMatrixPretty (String[][] matrix) throws IndexOutOfBoundsException {
+		
+		// Go trough each column
 		for (int s=0; s < matrix.length; s++) {
 			
 			// Get the maximal char count in this column
-			int maxLengthOfThisColumn = matrix[s][0].length();
+			int maxLengthOfThisColumn = 0;
 			for (int z=0; z < matrix[0].length; z++) {
-				if (matrix[s][z] != null) {
+				if (matrix[s][z] != null || !matrix[s][z].equals("")) {
 					if (matrix[s][z].length() > maxLengthOfThisColumn) {
 						maxLengthOfThisColumn = matrix[s][z].length();
 					}
 				}
 			}
 			
+			// Adjust every entry of this column
 			for (int z=0; z < matrix[0].length; z++) {
 				
-				// Get this entrys char count
-				if (matrix[s][z] != null) {
-					int thisEntrysCharCount = matrix[s][z].length();
+				// If this entry has a cluster entry: -----------------------------------------------------------------------------------------------
+				if (matrix[s][z] != null || !matrix[s][z].equals("")) {
 					
-					// for every char of difference add two spaces before the actual string
+					// Get this entrys char count
+					int thisEntrysCharCount = matrix[s][z].length();
 					String thisEntrysString = matrix[s][z];
-					for (int l=0; l < maxLengthOfThisColumn - thisEntrysCharCount; l ++) {
-						thisEntrysString = "  " + thisEntrysString;
+					
+					// figure out if the left space should be filled with blanks or lines
+					boolean lines = false;
+					for (int l=0; l < s; l++) { // Go trough the columns (same row)!
+						if (matrix[l][z] != null || !matrix[l][z].equals("")) {
+							lines = true;
+						}
 					}
 					
-					thisEntrysString += " -- ";
+					// Fill lines: for every char of difference add two - before the actual string
+					if (lines) {
+						for (int v=0; v < maxLengthOfThisColumn - thisEntrysCharCount; v++) {
+							thisEntrysString = "--" + thisEntrysString;
+						}
+					}
+					// Fill blanks: for every char of difference add two spaces before the actual string
+					else {
+						for (int v=0; v < maxLengthOfThisColumn - thisEntrysCharCount; v++) {
+							thisEntrysString = "  " + thisEntrysString;
+						}
+					}
+					
+					// Add a nice ending IF this is not he last column
+					if (s != matrix.length - 1) {
+						thisEntrysString += " -- ";
+					}
+					
+				}
+				// If this is an empty entry: --------------------------------------------------------------------------------------------------------
+				else {
+					
+					// If this is the first column just fill the entry up with blanks (two per char of the maxLengthOfThisColumn)
+					if (s == 0) {
+						String filler = "";
+						for (int f=0; f < maxLengthOfThisColumn; f++) {
+							filler += "  ";
+						}
+						matrix[s][z] = filler;
+					}
+					// If this is a middle column we need to figure out if this entry should be blank or have a line or a merge
+					else if (s > 0 && s < matrix.length - 1) {
+						
+						// If there is a value to the right (same row, different column) there needs to be a line!
+						boolean lines = false;
+						for (int r=s; r < matrix.length; r++) { // Go trough the columns (same row)!
+							if (matrix[r][z] != null || !matrix[r][z].equals("")) {
+								lines = true;
+							}
+						}
+						
+						if (lines) {
+							// TODO
+						}
+						
+						// TODO
+						// if (matrix[s-1][z] != null) //boolean merge = false;
+						
+					}
+					// If this the last column we need to figure out if this entry should be blank or a merge
+					else if (s == matrix.length - 1) {
+						// figure out if the left space should be filled with blanks or lines
+						boolean lines = false;
+						for (int r=s; r < matrix.length; r++) { // Go trough the columns (same row)!
+							if (matrix[r][z] != null || !matrix[r][z].equals("")) {
+								
+								//TODO
+								
+							}
+						}
+					}
+					else {
+						throw new IndexOutOfBoundsException ("Dendogram - makeMatrixPretty(...): " +
+								"The column variable was out of bounds.");
+					}
 				}
 			}
+			
 		}
+		
 	}
 	
 	
@@ -238,52 +316,6 @@ public class Dendogram {
 		return result;
 	}
 	
-	/**
-	 * @param diff = the number of clusters you need to drow the line over
-	 * @param startDepth = the depth of the cluster node which calls this method
-	 * @param placerChar = the seperating char which will fill the result String, probably '-' or ' '
-	 * 
-	 * @return A String which draws a line or spaces over (diff)-clusters
-	 */
-	private String getPropperPlacer (int diff, int startDepth, char placerChar) {
-		String currentPlacer = "";
-		
-		for (int p=0; p < (2 * diff - 1); p++) {
-			if (p%2 == 0) {
-				currentPlacer += " " +placerChar+placerChar+placerChar;
-			} else {
-				currentPlacer += " " +placerChar+placerChar;
-				for (int q=0; q < 2*startDepth +1; q++) {
-					currentPlacer += placerChar;
-				}
-			}
-		}
-		
-		return currentPlacer;
-	}
-	
-	/** 
-	 * @param depth = the size of the given cluster list aka. how many members dies the cluster have?
-	 * @param spacer = here '-' or ' ' to create a line or leave space
-	 * @param spacerChar = here 'i', ' ' or '|'  to create the vertical lines
-	 * 
-	 * @return A String which is as long as the cluster which depth you use containing either a row of '-' or ' ' seperated by 'i' or '|'
-	 */
-	private String getOnePlacer (int depth, char spacer, char spacerChar) {
-		String end = " ";
-		
-		for (int q=0; q < (depth*2 +1); q++) {
-			if (q < depth) {
-				end += spacer;
-			} else if (q == depth) {
-				end += spacerChar;
-			} else {
-				end += ' ';
-			}
-		}
-		
-		return end;
-	}
 	
 	/**
 	 * @param list = Any list of type <Integer>
