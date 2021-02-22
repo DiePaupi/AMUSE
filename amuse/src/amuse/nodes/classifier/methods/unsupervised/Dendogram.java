@@ -1,5 +1,9 @@
 package amuse.nodes.classifier.methods.unsupervised;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Formatter;
@@ -71,23 +75,16 @@ public class Dendogram {
 			clusters.remove(clusterA);
 			clusters.remove(clusterB);
 			
-			AmuseLogger.write("DENDOGRAM", Level.DEBUG, "The clusters " + this.integerListToString(clusterA.getValue()) +
-					" and " +this.integerListToString(clusterB.getValue()) + " have been merged into " + this.integerListToString(parentValue));
+			//AmuseLogger.write("DENDOGRAM", Level.DEBUG, "The clusters " + this.integerListToString(clusterA.getValue()) +
+			//		" and " +this.integerListToString(clusterB.getValue()) + " have been merged into " + this.integerListToString(parentValue));
 		}
 	}
 	
 	
-	/** @return A List of Nodes which each contain a cluster */
-	public List<Node> getClusters () {return this.clusters;}
-	
 	/** Shows the Dendogram in the AMUSE Debug Console */
 	public void showClusters() {
-		AmuseLogger.write("DENDOGRAM", Level.DEBUG, "BEGINNING TO SHOW DENDOGRAM");
-		
 		String result = this.printClusters();
 		AmuseLogger.write("DENDOGRAM", Level.DEBUG, "Showing the dendogram for "+ clusters.size() +" different clusters: \n" +result);
-		
-		AmuseLogger.write("DENDOGRAM", Level.DEBUG, "FINISHED TO SHOW DENDOGRAM");
 	}
 	
 	
@@ -100,7 +97,6 @@ public class Dendogram {
 			
 			// Get the dendograms for every cluster and get their nice strings
 			for (int c=0; c < clusters.size(); c++) {
-				AmuseLogger.write("DENDOGRAM", Level.DEBUG, "Begining to get the dendogram for cluster " +c+ " of " +clusters.size());
 				Node current = clusters.get(c);
 				
 				// Get the cluster specific dendogram array
@@ -109,22 +105,17 @@ public class Dendogram {
 				String[][] outputStrings = new String[maxHightofThisCluster][current.getValue().size()];
 				int[][] kindOfEntries = new int[maxHightofThisCluster][current.getValue().size()];
 				this.fillOutputArray(outputStrings, maxHightofThisCluster-1, current.getValue().size()-1, current, kindOfEntries);
-				AmuseLogger.write("DENDOGRAM", Level.DEBUG, "The output matrix was filled.");
 				
 				// Get the dendogram array as string and add it to the result string
 				String formatInfo = this.makeMatrixPretty(outputStrings, kindOfEntries);
-				AmuseLogger.write("DENDOGRAM", Level.DEBUG, "The clusters dendogram matrix was made pretty.");
 				
 				result += this.getMatrixAsFormattedString(outputStrings, formatInfo) + "\n";
-				AmuseLogger.write("DENDOGRAM", Level.DEBUG, "The clusters dendogram matrix was converted to a string and added to the result.");
 			}
 			
 			// Get the ids and song names of all leafs at the end
 			result += "The song ids in the dendogram correspond to: \n \n";
 			for (int c=0; c < clusters.size(); c++) {
 				Node current = clusters.get(c);
-				
-				AmuseLogger.write("DENDOGRAM", Level.DEBUG, "Trying to add the path of the current cluster now, which is nr. " +c);
 				result += this.showNamesOfClusterSongs(current);
 			}
 		}
@@ -142,20 +133,16 @@ public class Dendogram {
 			
 			if (currentNode.getLeft() != null && currentNode.getRight() != null) {
 				kindOfEntry[column][row] = 2;
-				AmuseLogger.write("DENDOGRAM", Level.DEBUG, "The entry for kindOfEntry[" +column+ "][" +row+ "] was set to 2.");
 				
 				int rowsToLeaveFree = currentNode.getValue().size() - (currentNode.getLeft().getValue().size());
-				AmuseLogger.write("DENDOGRAM", Level.DEBUG, "rowsToLeaveFree was set to " +rowsToLeaveFree);
 				
 				// Go up through the entries until row - rowsToLeaveFree and set the kindOfEntry
 				if (rowsToLeaveFree > 0) {
 					for (int e=row-1; e > row - rowsToLeaveFree; e--) {
 						kindOfEntry[column][e] = 6;
-						AmuseLogger.write("DENDOGRAM", Level.DEBUG, "The entry for kindOfEntry[" +column+ "][" +e+ "] was set to 6.");
 					}
 				}
 				kindOfEntry[column][row - rowsToLeaveFree] = 5;
-				AmuseLogger.write("DENDOGRAM", Level.DEBUG, "The entry for kindOfEntry[" +column+ "][" +(row -1 -rowsToLeaveFree)+ "] was set to 5.");
 				
 				// Tell the left child that it should fill out its table entry
 				this.fillOutputArray(output, column-1, (row - rowsToLeaveFree), currentNode.getLeft(), kindOfEntry);
@@ -163,7 +150,6 @@ public class Dendogram {
 				// Tell the right child that it should fill out its table entry
 				this.fillOutputArray(output, column-1, row, currentNode.getRight(), kindOfEntry);
 			} else {
-				AmuseLogger.write("DENDOGRAM", Level.DEBUG, "At least one of the current nodes (" +currentNode.getID()+ ") childs was null.");
 				kindOfEntry[column][row] = 1;
 			}
 		}
@@ -172,7 +158,6 @@ public class Dendogram {
 	
 	private String getMatrixAsFormattedString (String[][] matrix,  String formatInfo) {
 		
-		Formatter formi = new Formatter();
 		String result = "";
 		
 		for (int x=0; x < matrix[0].length; x++) {
@@ -209,17 +194,6 @@ public class Dendogram {
 					if (currentString.length() > maxLengthOfThisColumn) {
 						maxLengthOfThisColumn = currentString.length();
 						maxStringOfThisColumn = currentString;
-					}
-				}
-			}
-			
-			// How many commas are in that longest string
-			int commaCount = 0;
-			if (maxStringOfThisColumn.contains(",")) {
-				char[] currentStringsCharArray = maxStringOfThisColumn.toCharArray();
-				for (int cha=0; cha < currentStringsCharArray.length; cha++) {
-					if (currentStringsCharArray[cha] == ',') {
-						commaCount++;
 					}
 				}
 			}
@@ -404,6 +378,122 @@ public class Dendogram {
 		  if (node == null) return 0;
 		  return 1 + Math.max(findHeight(node.getLeft()), findHeight(node.getRight()));
 		}
+	
+	
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	/** Print the dendogram as Tikz Forest in LaTeX */
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	public void printTikzDendogram (String path) throws NodeException {
+		
+		File dendogramFile = new File(path + "Ward_DENDOGRAM.tex");
+		BufferedWriter fileWriter;
+		try {
+			fileWriter = new BufferedWriter(new FileWriter(dendogramFile));
+			String fileHead = "\\documentclass[12pt,border=10pt]{standalone} \n"
+					+ "\\usepackage[edges]{forest} \n"
+					+ "\\forestset{ \n"
+					+ "   my tree/.style={ \n"
+					+ "      forked edges, \n"
+					+ "      for tree={ \n"
+					+ "         grow'=0, \n"
+					+ "         draw, \n"
+					+ "         minimum height=5mm, \n"
+					+ "         text centered, \n"
+					+ "         tier/.option=level, \n"
+					+ "      }, \n"
+					+ "      delay={ \n"
+					+ "         where content={}{content=\\phantom{X},draw=none, child anchor=children}{} \n"
+					+ "      }, \n"
+					+ "   }, \n"
+					+ "} \n \n"
+					+ "\\begin{document} \n";
+			fileWriter.append( fileHead );
+			
+			// Add a new Dendogram for every cluster
+			for (int c=0; c < clusters.size(); c++) {
+				fileWriter.append( "\\begin{forest} \n" + "   my tree \n" );
+				
+				//
+				Node current = clusters.get(c);
+				String currentDendogram = this.getNodeStructure(current, current.getValue().size());
+				fileWriter.append( currentDendogram );
+				
+				// End the cluster (and if it's NOT the last, add some space)
+				fileWriter.append( "\\end{forest} \n \n" );
+				if (c < clusters.size() -1) {
+					fileWriter.append( "\\vspace*{1cm} \n \n" );
+				}
+			}
+			
+			fileWriter.append( "\\end{document}" );
+			
+			fileWriter.close();
+		} catch (IOException e) {
+			AmuseLogger.write("DENDOGRAM", Level.WARN, "Couldn't initialize the file writer.");
+		}
+	}
+	
+	
+	private String getNodeStructure (Node current, int maxDepth) {
+		String result = "";
+		
+		if (current != null) {
+			
+			String indent = "   ";
+			for (int v = current.getValue().size(); v < maxDepth; v++) {
+				indent += "   ";
+			}
+			
+			String openNode = indent + "[";
+			
+			// If this is a leaf node
+			if (current.getValue().size() == 1) {
+				openNode += "(" + current.getValue().get(0) + ") " + this.getSongnameFromPath(current);
+				return openNode + "] \n";
+			}
+			// If this is a middle node wit a left and right child
+			else if (current.getLeft() != null && current.getRight() != null) {
+				openNode += this.integerListToString(current.getValue());
+				
+				String leftChildsString = this.getNodeStructure(current.getLeft(), maxDepth);
+				String rightChildsString = this.getNodeStructure(current.getRight(), maxDepth);
+				
+				String endNode = indent + "] \n";
+				return openNode + "\n" + leftChildsString + rightChildsString + endNode;
+			}
+			// Else
+			else {
+				AmuseLogger.write("DENDOGRAM", Level.WARN, "Something went wrong while printing the dendogram structure.");
+			}
+		}
+		
+		return result;
+	}
+	
+	
+	/**
+	 * @param current = A leaf node
+	 * @return Only the song name of this node (without the rest of the path)
+	 */
+	private String getSongnameFromPath (Node current) {
+		String result = "";
+		
+		// Only if it's a leaf node
+		if (current.getValue().size() == 1) {
+			char[] name = current.getName().toCharArray();
+			// Ignore the last 4 chars as they are something like ".mp3" or ".wav"
+			for (int c = name.length -5; c >= 0; c--) {
+				// If we have reached the end of the song name there'll be a /
+				if (name[c] == '/') {
+					break;
+				} else {
+					result = name[c] + result;
+				}
+			}
+		}
+		
+		return result;
+	}
 	
 	
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
