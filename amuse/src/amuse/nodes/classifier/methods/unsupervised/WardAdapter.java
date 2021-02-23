@@ -130,7 +130,7 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
         		clusterAffiliation.add(songsInThatCluster);
         	}
         	
-        	Dendogram dendo = new Dendogram(clusterAffiliation, songIdsAndNames);
+        	Dendrogram dendo = new Dendrogram(clusterAffiliation, songIdsAndNames);
         	
         	
         	
@@ -337,7 +337,6 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
     		
     		DataSet amuseDataSet = new DataSet("WardResult_DataSet");
     		
-    		// TODO - Eventuell muss x und x < ... angepasst werden.
     		for (int x=0; x < numberOfFeatures; x++ ) {
     			List<Double> featureXList = new ArrayList<Double>();
     			

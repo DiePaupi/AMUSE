@@ -354,9 +354,7 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 						inputForClassification = new DataSet("ClassificationSet");
 					
 						//add the attributes (except for attributes that are to be ignored and the Id)
-						// TODO: -Paupi- and count the number of clusters if unsupervised
-						if (isSupervised) {
-							for(int i = 0; i < completeInput.getAttributeCount(); i++) {
+						for(int i = 0; i < completeInput.getAttributeCount(); i++) {
 								if(!attributesToIgnore.contains(i) && !completeInput.getAttribute(i).getName().equals("Id")) {
 									if(completeInput.getAttribute(i).getName().equals("NumberOfCategories")) {
 										AmuseLogger.write(ClassifierNodeScheduler.class.getName(), Level.WARN, "NumberOfCategories is not an allowed attribute name. The attribute will be ignored.");
@@ -366,35 +364,6 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 									}
 								}
 							}
-						} else {
-							int clusterNumber = 0;
-							
-							for(int i = 0; i < completeInput.getAttributeCount(); i++) {
-								if(!attributesToIgnore.contains(i) && !completeInput.getAttribute(i).getName().equals("Id")) {
-									if(completeInput.getAttribute(i).getName().equals("NumberOfCategories")) {
-										AmuseLogger.write(ClassifierNodeScheduler.class.getName(), Level.WARN, "NumberOfCategories is not an allowed attribute name. The attribute will be ignored.");
-									}
-									else {
-										inputForClassification.addAttribute(completeInput.getAttribute(i));
-									}
-								}
-								// if the name of attribute i begins with "cluster" -> count it
-								if (completeInput.getAttribute(i).getName().substring(0,7).equals("cluster")) {
-									clusterNumber++;
-								}
-							}
-							
-							if (clusterNumber == 0) {
-								throw new NodeException("It's supposed to be unsupervised classification but there wasn't any cluster attribute.");
-							} else if (clusterNumber ==1) {
-								AmuseLogger.write(ClassifierNodeScheduler.class.getName(), Level.WARN, "There is only one giant cluster!");
-								numberOfCategories = clusterNumber;
-							} else {
-								AmuseLogger.write(ClassifierNodeScheduler.class.getName(), Level.DEBUG, "There were "+ clusterNumber +" Clusters detected.");
-								numberOfCategories = clusterNumber;
-							}
-						}
-						AmuseLogger.write("ClassifierNodeScheduler", Level.DEBUG, "InputForClassification added it's attributes.");
 						
 					//Prepare the description of the classifier input
 					boolean startAndEnd = true;
@@ -1060,6 +1029,8 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 				AmuseLogger.write(this.getClass().getName(), Level.INFO, "Starting the unsupervised classification with " + 
 						((AmuseTask)this.commonInterface).getProperties().getProperty("name") + "...");
 				this.cUinterface.classify();
+				
+				// TODO - PAUPI: Set numberOfAttributes as clusternumber
 			}
 			
 			
@@ -1075,32 +1046,38 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 		
 		DataSet d = ((DataSetInput)((ClassificationConfiguration)taskConfiguration).getInputToClassify()).getDataSet();
 		
-		int positionOfFirstCategory = d.getAttributeCount() - numberOfCategories;
-		
-		// Go through all songs
-		int currentPartition = 0;
-		for(int i=0;i<descriptionOfClassifierInput.size();i++) {
-			int numberOfCorrespondingPartitions = descriptionOfClassifierInput.get(i).getStartMs().length;
+		if (!isSupervised) {
+			this.updateTheNumberOfClusters(d);
 			
-			// Gather the partition data for this song	
-			Double[][] relationships = new Double[numberOfCorrespondingPartitions][numberOfCategories];
-			String[] labels = new String[numberOfCategories];
 			
-			for(int j=0;j<numberOfCorrespondingPartitions;j++) {
-				for(int category=0;category<numberOfCategories;category++) {
-					relationships[j][category] = (double)d.getAttribute(positionOfFirstCategory + category).getValueAt(currentPartition);
-					if(j==0)labels[category] = d.getAttribute(positionOfFirstCategory + category).getName().substring(10);
+		} else {
+			
+			int positionOfFirstCategory = d.getAttributeCount() - numberOfCategories;
+			
+			// Go through all songs
+			int currentPartition = 0;
+			for(int i=0;i<descriptionOfClassifierInput.size();i++) {
+				int numberOfCorrespondingPartitions = descriptionOfClassifierInput.get(i).getStartMs().length;
+				
+				// Gather the partition data for this song	
+				Double[][] relationships = new Double[numberOfCorrespondingPartitions][numberOfCategories];
+				String[] labels = new String[numberOfCategories];
+				
+				for(int j=0;j<numberOfCorrespondingPartitions;j++) {
+					for(int category=0;category<numberOfCategories;category++) {
+						relationships[j][category] = (double)d.getAttribute(positionOfFirstCategory + category).getValueAt(currentPartition);
+						if(j==0)labels[category] = d.getAttribute(positionOfFirstCategory + category).getName().substring(10);
+					}
+					currentPartition++;
 				}
-				currentPartition++;
+				
+				// Save the partition data for this song
+				classificationResults.add(new ClassifiedSongPartitions(descriptionOfClassifierInput.get(i).getPathToMusicSong(), 
+						descriptionOfClassifierInput.get(i).getSongId(),
+						descriptionOfClassifierInput.get(i).getStartMs(), 
+						descriptionOfClassifierInput.get(i).getEndMs(), labels, relationships));
 			}
-			
-			// Save the partition data for this song
-			classificationResults.add(new ClassifiedSongPartitions(descriptionOfClassifierInput.get(i).getPathToMusicSong(), 
-					descriptionOfClassifierInput.get(i).getSongId(),
-					descriptionOfClassifierInput.get(i).getStartMs(), 
-					descriptionOfClassifierInput.get(i).getEndMs(), labels, relationships));
 		}
-		
 		return classificationResults;
 	}
 
@@ -1198,6 +1175,28 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 			e.printStackTrace();
 		}
 		
+	}
+	
+	
+	private void updateTheNumberOfClusters (DataSet input) {
+		
+			int clusterNumber = 0;
+			for(int i = 0; i < input.getAttributeCount(); i++) {
+				if (input.getAttribute(i).getName().substring(0,7).equals("cluster")) {
+					clusterNumber++;
+				}
+			}
+			
+			if (clusterNumber == 0) {
+				AmuseLogger.write(ClassifierNodeScheduler.class.getName(), Level.ERROR, "It's supposed to be unsupervised classification "
+						+ "but there wasn't any cluster attribute.");
+			} else if (clusterNumber == 1) {
+				AmuseLogger.write(ClassifierNodeScheduler.class.getName(), Level.WARN, "There is only one giant cluster!");
+				numberOfCategories = clusterNumber;
+			} else {
+				AmuseLogger.write(ClassifierNodeScheduler.class.getName(), Level.DEBUG, "There were "+ clusterNumber +" Clusters detected.");
+				numberOfCategories = clusterNumber;
+			}
 	}
 	
 	public void setNumberOfCategories(int numberOfCategories) {

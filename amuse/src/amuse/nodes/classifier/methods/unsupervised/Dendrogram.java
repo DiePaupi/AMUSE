@@ -16,7 +16,7 @@ import amuse.interfaces.nodes.NodeException;
 import amuse.nodes.classifier.methods.unsupervised.idAndName;
 import amuse.util.AmuseLogger;
 
-public class Dendogram {
+public class Dendrogram {
 	
 	List<Node> clusters;
 	
@@ -24,7 +24,7 @@ public class Dendogram {
 	 * Creates a Dendogram (Tree like structure) for hierarchical clustering
 	 * @param input = A List of Lists<Integer> which each contain the SongIDs belonging to a cluster
 	 */
-	public Dendogram (List<List<Integer>> clusterInput, List<idAndName> songIdsAndNames) {
+	public Dendrogram (List<List<Integer>> clusterInput, List<idAndName> songIdsAndNames) {
 		
 		clusters = new ArrayList<Node>();
 		
