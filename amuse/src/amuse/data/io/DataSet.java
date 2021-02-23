@@ -65,7 +65,7 @@ public class DataSet extends DataSetAbstract implements Serializable {
      * into memory
      *
      * @param arffFile
-     * @param name
+     * @param data.name
      * @throws IOException
      */
     public DataSet(File arffFile) throws IOException {

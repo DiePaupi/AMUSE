@@ -366,6 +366,7 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
     		
     		// Give the amuseDataSet to the ClassificationConfiguration so it may be put together and saved there
         	// The ClassifierNodeScheduler proceedTask(...) returns or saves an ArrayList<ClassifiedSongPartitionsDescription>
+    		((ClassificationConfiguration)(this.correspondingScheduler.getConfiguration())).setPartitionsAlreadySummerized(true);
             ((ClassificationConfiguration)(this.correspondingScheduler.getConfiguration())).setInputToClassify(new DataSetInput(amuseDataSet));
     		amuseDataSet.saveToArffFile(new File(outputPath + "Ward_Result.arff"));
     		

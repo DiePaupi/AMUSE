@@ -100,6 +100,7 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 	/** Saves the methodType (Regression not included) */
 	private boolean isSupervised;
 	
+	
 	/**
 	 * Constructor
 	 */
@@ -1045,14 +1046,34 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 		ArrayList<ClassifiedSongPartitions> classificationResults = new ArrayList<ClassifiedSongPartitions>();
 		
 		DataSet d = ((DataSetInput)((ClassificationConfiguration)taskConfiguration).getInputToClassify()).getDataSet();
+		boolean partitionsAlreadySummerized = ((ClassificationConfiguration)taskConfiguration).getPartitionsAlreadySummerized();
 		
 		if (!isSupervised) {
 			this.updateTheNumberOfClusters(d);
+		} 
+		
+		int positionOfFirstCategory = d.getAttributeCount() - numberOfCategories;
+		
+		if (!isSupervised && partitionsAlreadySummerized) {
 			
-			
+			// Go through all songs
+			for(int i=0;i<d.getValueCount();i++) {
+				
+				// Gather the partition data for this song	
+				Double[][] relationships = new Double[1][numberOfCategories];
+				String[] labels = new String[numberOfCategories];
+				
+				for(int cluster=0; cluster < numberOfCategories; cluster++) {
+					relationships[0][cluster] = (double)d.getAttribute(positionOfFirstCategory + cluster).getValueAt(i);
+					
+					labels[cluster] = d.getAttribute(positionOfFirstCategory + cluster).getName();
+				}
+				
+				// Save the partition data for this song
+				classificationResults.add(new ClassifiedSongPartitions(descriptionOfClassifierInput.get(i).getPathToMusicSong(), 
+						descriptionOfClassifierInput.get(i).getSongId(), labels, relationships));
+			}
 		} else {
-			
-			int positionOfFirstCategory = d.getAttributeCount() - numberOfCategories;
 			
 			// Go through all songs
 			int currentPartition = 0;
@@ -1066,7 +1087,11 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 				for(int j=0;j<numberOfCorrespondingPartitions;j++) {
 					for(int category=0;category<numberOfCategories;category++) {
 						relationships[j][category] = (double)d.getAttribute(positionOfFirstCategory + category).getValueAt(currentPartition);
-						if(j==0)labels[category] = d.getAttribute(positionOfFirstCategory + category).getName().substring(10);
+						if(j==0) {
+							String name = d.getAttribute(positionOfFirstCategory + category).getName();
+							if (name.length() > 10) { labels[category] = name.substring(10); }
+							else { labels[category] = name; }
+						}
 					}
 					currentPartition++;
 				}
@@ -1198,6 +1223,7 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 				numberOfCategories = clusterNumber;
 			}
 	}
+	
 	
 	public void setNumberOfCategories(int numberOfCategories) {
 		this.numberOfCategories = numberOfCategories;

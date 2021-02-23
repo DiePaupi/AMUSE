@@ -60,6 +60,13 @@ public class SongPartitionsDescription {
 		this.startMs = startMs;
 		this.endMs = endMs;
 	}
+	
+	public SongPartitionsDescription(String pathToMusicSong, int songId) {
+		this.pathToMusicSong = pathToMusicSong;
+		this.songId = songId;
+		this.startMs = null;
+		this.endMs = null;
+	}
 
 	/**
 	 * @return the pathToMusicSong

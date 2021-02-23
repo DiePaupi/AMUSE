@@ -58,6 +58,13 @@ public class ClassifiedSongPartitions extends SongPartitionsDescription {
 		this.relationships = relationships;
 		this.labels = labels;
 	}
+	
+	public ClassifiedSongPartitions(String pathToMusicSong, int songId, String[] labels,
+			Double[][] relationships) {
+		super(pathToMusicSong, songId);
+		this.relationships = relationships;
+		this.labels = labels;
+	}
 
 	/**
 	 * @return the relationships

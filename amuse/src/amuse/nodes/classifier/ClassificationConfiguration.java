@@ -128,6 +128,9 @@ public class ClassificationConfiguration extends TaskConfiguration {
 	 */
 	private int numberOfValuesPerWindow = -1;
 	
+	/** Sets if the adapter class has already summarized the partitions - Default is false, everything else must be specifically set */
+	private boolean partitionsAlreadySummerized = false;
+	
 
 	/**
 	 * STANDARD supervised CONSTRUCTOR
@@ -964,5 +967,13 @@ public class ClassificationConfiguration extends TaskConfiguration {
 	 */
 	public int getNumberOfValuesPerWindow() {
 		return this.numberOfValuesPerWindow;
+	}
+	
+	public void setPartitionsAlreadySummerized (boolean partitionsAlreadySummerized) {
+		this.partitionsAlreadySummerized = partitionsAlreadySummerized;
+	}
+	
+	public boolean getPartitionsAlreadySummerized () {
+		return this.partitionsAlreadySummerized;
 	}
 }
