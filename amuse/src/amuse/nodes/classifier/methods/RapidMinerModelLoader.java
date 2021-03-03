@@ -43,7 +43,6 @@ import com.rapidminer.repository.RepositoryManager;
 import com.rapidminer.repository.local.LocalRepository;
 import com.rapidminer.repository.versioned.FilesystemRepositoryAdapter;
 import com.rapidminer.tools.OperatorService;
-import com.rapidminer.tools.encryption.EncryptionProvider;
 import com.rapidminer.versioning.repository.FileSystemRepository;
 import com.google.crypto.tink.aead.AeadConfig;
 
