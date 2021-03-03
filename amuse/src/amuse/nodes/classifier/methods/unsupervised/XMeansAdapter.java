@@ -28,6 +28,7 @@ import com.rapidminer.operator.io.ResultWriter;
 import com.rapidminer.operator.ports.InputPort;
 import com.rapidminer.operator.ports.OutputPort;
 import com.rapidminer.tools.OperatorService;
+import com.rapidminer.tools.math.similarity.DistanceMeasures;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -38,9 +39,6 @@ import org.apache.log4j.Level;
 
 /**
  * Clusters given data by using the x-means clustering method via RapidMiner
- * 
- * TODO: The choice of distance measure is a lie
- * 
  * @author Pauline Speckmann
  */
 public class XMeansAdapter extends AmuseTask implements ClassifierUnsupervisedInterface {
@@ -49,44 +47,42 @@ public class XMeansAdapter extends AmuseTask implements ClassifierUnsupervisedIn
     private int k_min;
     private int k_max;
     
-    /** Chooses the numerical measure to be used */
-    private String numericalMeasure;
-    	//private String measureType;
-    
     /** Upper bounds for the max number of runs and max number of optimization steps */
     private int max_runs;
     private int max_opt_steps;
     
+    /** Determines the numerical distance measure to be used */
+	private String measureType;
+    
     /** Should good start values be determined? */
     private boolean determine_good_start_values;
-
-    /** Not changeable parameters */
-    private String clusteringAlgorithm;
     
 
     @Override
-    public void setParameters(String parameterString) {
+    public void setParameters(String parameterString) throws NodeException {
 
         // Should the default parameters be used? Or are values given?
         if(parameterString == "" || parameterString == null) {
             k_min = 3;
             k_max = 60;
-            numericalMeasure = new String("EuclideanDistance");
             max_runs = 30;
             max_opt_steps = 100;
+            measureType = "EuclideanDistance";
             determine_good_start_values = true;
         } else {
             StringTokenizer tok = new StringTokenizer(parameterString, "_");
             k_min = new Integer(tok.nextToken());
             k_max = new Integer(tok.nextToken());
-            numericalMeasure = tok.nextToken();
             max_runs = new Integer(tok.nextToken());
             max_opt_steps = new Integer(tok.nextToken());
+            measureType = tok.nextToken();
             determine_good_start_values = Boolean.parseBoolean(tok.nextToken());
         }
-
-        //measureType = new String("NumericalMeasures");
-        clusteringAlgorithm = new String("FastKMeans");
+        
+        //Check if all parameters are in range
+        if (k_min < 2 || k_max < 3 || max_runs < 1 || max_opt_steps < 1) {
+        	throw new NodeException("XMeansAdapter: One of the parameters was out of range!");
+        }
     }
 
     /*
@@ -126,11 +122,15 @@ public class XMeansAdapter extends AmuseTask implements ClassifierUnsupervisedIn
                 clusterer.setParameter("k_min", new Integer(k_min).toString());
                 clusterer.setParameter("k_max", new Integer(k_max).toString());
                 clusterer.setParameter("determine_good_start_values", String.valueOf(determine_good_start_values));
-                	//clusterer.setParameter("numericalMeasure", this.numericalMeasure);
                 clusterer.setParameter("max_runs", new Integer(max_runs).toString());
                 clusterer.setParameter("max_optimization_steps", new Integer(max_opt_steps).toString());
-                	//clusterer.setParameter("measureType", this.measureType);
-                clusterer.setParameter("clustering_algorithm", this.clusteringAlgorithm);
+                clusterer.setParameter("clustering_algorithm", "FastKMeans");
+                clusterer.setParameter("add_as_label", "false");
+                
+                // Set the distance measure
+                clusterer.setParameter(DistanceMeasures.PARAMETER_MEASURE_TYPES, DistanceMeasures.MEASURE_TYPES[DistanceMeasures.NUMERICAL_MEASURES_TYPE]);
+                clusterer.setParameter(DistanceMeasures.PARAMETER_NUMERICAL_MEASURE, measureType);
+                
                 process.getRootOperator().getSubprocess(0).addOperator(clusterer);
 
                 // Connect the ports so RapidMiner knows whats up

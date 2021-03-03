@@ -2,17 +2,17 @@ package amuse.nodes.classifier.methods.unsupervised;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.StringTokenizer;
+
 import org.apache.log4j.Level;
+
 import com.rapidminer.Process;
 import com.rapidminer.example.ExampleSet;
 import com.rapidminer.operator.IOContainer;
 import com.rapidminer.operator.Operator;
-import com.rapidminer.operator.clustering.clusterer.FastKMeans;
+import com.rapidminer.operator.clustering.clusterer.DBScan;
 import com.rapidminer.operator.ports.InputPort;
 import com.rapidminer.operator.ports.OutputPort;
-import com.rapidminer.parameter.ParameterType;
 import com.rapidminer.tools.OperatorService;
 import com.rapidminer.tools.math.similarity.DistanceMeasures;
 
@@ -30,43 +30,34 @@ import amuse.util.AmuseLogger;
 import amuse.util.LibraryInitializer;
 
 /**
- * Clusters given data by using the FastKMeans Algorithm by RapidMiner
+ * Clusters given data by using the DBScan Algorithm by RapidMiner* 
  * @author Pauline Speckmann
  */
-public class FastKMeansAdapter extends AmuseTask implements ClassifierUnsupervisedInterface {
-
-	/** k determines the number of clusters and the others the upper bound for the optimization steps and runs */
-	private int k;
-	private int max_opt_steps;
-	private int max_runs;
+public class DBScanAdapter extends AmuseTask implements ClassifierUnsupervisedInterface {
+	
+	private double epsilon;
+	private int min_points;
 	
 	/** Determines the numerical distance measure to be used */
 	private String measureType;
-	
-	/** Should RapidMiner determine good start values? */
-	private boolean determine_good_start_values;
-	
+
 	@Override
 	public void setParameters(String parameterString) throws NodeException {
 		// Should the default parameters be used? Or are values given?
         if(parameterString == "" || parameterString == null) {
-            k = 5;
-            max_opt_steps = 100;
-            max_runs = 10;
-            measureType = "EuclideanDistance";
-            determine_good_start_values = true;
+        	epsilon = 1.0;
+        	min_points = 5;
+        	measureType = "EuclideanDistance";
         } else {
             StringTokenizer tok = new StringTokenizer(parameterString, "_");
-            k = new Integer(tok.nextToken());
-            max_opt_steps = new Integer(tok.nextToken());
-            max_runs = new Integer(tok.nextToken());
+            epsilon = new Double(tok.nextToken());
+            min_points = new Integer(tok.nextToken());
             measureType = tok.nextToken();
-            determine_good_start_values = Boolean.parseBoolean(tok.nextToken());
         }
         
-      //Check if all paramters are in range
-        if (k < 2 || max_runs < 1 || max_opt_steps < 1) {
-        	throw new NodeException("FastKMeans: One of the parameters was out of range!");
+        //Check if all paramters are in range
+        if (epsilon < 0.0 || min_points < 1) {
+        	throw new NodeException("DBScan: One of the parameters was out of range!");
         }
 	}
 
@@ -90,14 +81,12 @@ public class FastKMeansAdapter extends AmuseTask implements ClassifierUnsupervis
             Process process = new Process();
 
                 // Create the XMeans Operator in RM
-                Operator clusterer = OperatorService.createOperator(FastKMeans.class);
+                Operator clusterer = OperatorService.createOperator(DBScan.class);
 
                 // Set the parameters and add the clustering to the process
-                clusterer.setParameter("determine_good_start_values", String.valueOf(determine_good_start_values));
+                clusterer.setParameter("epsilon", new Double(epsilon).toString());
+                clusterer.setParameter("min_points", new Integer(min_points).toString());
                 clusterer.setParameter("remove_unlabeled", "false");
-                clusterer.setParameter("k", new Integer(k).toString());
-                clusterer.setParameter("max_optimization_steps", new Integer(max_opt_steps).toString());
-                clusterer.setParameter("max_runs", new Integer(max_runs).toString());
                 
                 // Set the distance measure
                 clusterer.setParameter(DistanceMeasures.PARAMETER_MEASURE_TYPES, DistanceMeasures.MEASURE_TYPES[DistanceMeasures.NUMERICAL_MEASURES_TYPE]);
@@ -113,12 +102,12 @@ public class FastKMeansAdapter extends AmuseTask implements ClassifierUnsupervis
                 OutputPort processOutputPort = process.getRootOperator().getSubprocess(0).getInnerSources().getPortByIndex(0);
                 processOutputPort.connectTo(clustererInputPort);
                 clustererOutputPort.connectTo(processInputPort);
-                	//AmuseLogger.write("XMeansAdapter", Level.DEBUG, "Ports were connected");
+                	//AmuseLogger.write("DBScanAdapter", Level.DEBUG, "Ports were connected");
 
             // Run the RapidMiner-Process - XMeans needs an ExampleSet so it's being converted here
             ExampleSet exampleSet = dataSetToClassify.convertToRapidMinerExampleSet();
             IOContainer result = process.run(new IOContainer(exampleSet));
-            AmuseLogger.write("FastKMeansAdapter", Level.DEBUG, "RapidMiner FastKMeansAdapter finished successfully");
+            AmuseLogger.write("DBScanAdapter", Level.DEBUG, "RapidMiner DBScanAdapter finished successfully");
 
          	// Get the RapidMiner Result
             exampleSet = result.get(ExampleSet.class);
@@ -127,7 +116,7 @@ public class FastKMeansAdapter extends AmuseTask implements ClassifierUnsupervis
          	// Edit the result so AMUSE can work with it again
          	
          		// Copy the result DataSet but without the id attribute (that RapidMiner put there)
-         		DataSet amuseDataSet = new DataSet("FastKMeansAdapterResultDataSet");
+         		DataSet amuseDataSet = new DataSet("DBScanAdapterResultDataSet");
     			for (int j=0; j<resultDataSet.getAttributeCount(); j++) {
     				// If the attribute is NOT the id copy the attribute to the amuseDataSet
     				if (!resultDataSet.getAttribute(j).getName().equals("id") && !resultDataSet.getAttribute(j).getName().equals("cluster")) {
@@ -154,9 +143,9 @@ public class FastKMeansAdapter extends AmuseTask implements ClassifierUnsupervis
         			}
         		}
         		if (maxClusterValue == 0) {
-        			AmuseLogger.write("FastKMeansAdapter", Level.ERROR , "There is only 1 giant Cluster and everything is in it!");
+        			AmuseLogger.write("DBScanAdapter", Level.ERROR , "There is only 1 giant Cluster and everything is in it!");
         		}
-        		AmuseLogger.write("FastKMeansAdapter", Level.DEBUG, "There are " + maxClusterValue + "+1 different clusters.");
+        		AmuseLogger.write("DBScanAdapter", Level.DEBUG, "There are " + maxClusterValue + "+1 different clusters.");
         		
         		// Create new Cluster Attributes
         		for (int c=0; c<maxClusterValue+1; c++) {
@@ -172,13 +161,13 @@ public class FastKMeansAdapter extends AmuseTask implements ClassifierUnsupervis
         			Attribute clusterX = new NumericAttribute("cluster_" + c, clusterXvalueList);
         			amuseDataSet.addAttribute(clusterX);
         		}
-        		AmuseLogger.write("FastKMeansAdapter", Level.DEBUG, "FastKMeansAdapter successfully edited the result to AMUSE standad");
+        		AmuseLogger.write("DBScanAdapter", Level.DEBUG, "DBScanAdapter successfully edited the result to AMUSE standad");
     		
     		// Give the amuseDataSet to the ClassificationConfiguration so it may be put together and saved there
             ((ClassificationConfiguration)(this.correspondingScheduler.getConfiguration())).setInputToClassify(new DataSetInput(amuseDataSet));
             
             // Save to .arff file
-            String outputPath = AmusePreferences.get(KeysStringValue.AMUSE_PATH) + File.separator + "experiments" + File.separator + "FastKMeansAdapter_Result.arff";
+            String outputPath = AmusePreferences.get(KeysStringValue.AMUSE_PATH) + File.separator + "experiments" + File.separator + "DBScanAdapter_Result.arff";
             amuseDataSet.saveToArffFile(new File(outputPath));
 
         } catch(Exception e) {
