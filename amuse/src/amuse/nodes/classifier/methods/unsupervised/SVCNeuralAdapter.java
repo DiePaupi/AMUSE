@@ -14,7 +14,6 @@ import com.rapidminer.operator.clustering.clusterer.SVClustering;
 import com.rapidminer.operator.ports.InputPort;
 import com.rapidminer.operator.ports.OutputPort;
 import com.rapidminer.tools.OperatorService;
-import com.rapidminer.tools.math.similarity.DistanceMeasures;
 
 import amuse.data.io.DataSet;
 import amuse.data.io.DataSetInput;
@@ -29,18 +28,17 @@ import amuse.preferences.KeysStringValue;
 import amuse.util.AmuseLogger;
 import amuse.util.LibraryInitializer;
 
-public class SupportVectorClusteringAdapter extends AmuseTask implements ClassifierUnsupervisedInterface {
+public class SVCNeuralAdapter extends AmuseTask implements ClassifierUnsupervisedInterface {
 
-	/** The SVM kernel type */
-	private int kernelType; //0=dot, 1=radial, 2=polynomial, (3=neural)
 	/** Size of the cache for kernel evaluations in MB */
 	private int cacheSize;
 	/** The number of virtual sample points to check for neighborship */
 	private int numSamplePoints;
 	
-	/** The SVM kernel parameter gamma (radial, default 1.0) / degree (polynomial, default 2) */
-	private double kernel_gamma;
-	private int kernel_degree;
+	/** The SVM kernel parameter a (neural) */
+	private double kernel_a;
+	/** The SVM kernel parameter b (neural) */
+	private double kernel_b;
 	
 	/** The minimal number of points in each cluster */
 	private int min_pts;
@@ -57,11 +55,11 @@ public class SupportVectorClusteringAdapter extends AmuseTask implements Classif
 	public void setParameters(String parameterString) throws NodeException {
 		// Should the default parameters be used? Or are values given?
         if(parameterString == "" || parameterString == null) {
-        	kernelType = 1; 
         	cacheSize = 200;
         	numSamplePoints = 20;
         	
-        	kernel_gamma = 1.0;
+        	kernel_a = 1.0;
+        	kernel_b = 0.0;
         	
         	min_pts = 2;
         	convergence_epsilon = 0.001;
@@ -70,26 +68,11 @@ public class SupportVectorClusteringAdapter extends AmuseTask implements Classif
         	r = -1.0;
         } else {
             StringTokenizer tok = new StringTokenizer(parameterString, "_");
-            
-            String kernelTypeName = tok.nextToken();
-            if (kernelTypeName.equals("dot")) {
-            	kernelType = 0;
-            } else if (kernelTypeName.equals("radial")) {
-            	kernelType = 1;
-            } else if (kernelTypeName.equals("polynomial")) {
-            	kernelType = 2;
-            } else {
-            	throw new NodeException("SVC: The kernel type wasn't definied correctly.");
-            }
-            
             cacheSize = new Integer(tok.nextToken());
             numSamplePoints = new Integer(tok.nextToken());
             
-            if (kernelType == 1) {
-            	kernel_gamma = new Double(tok.nextToken());
-            } else if (kernelType == 2) {
-            	kernel_degree = new Integer(tok.nextToken());
-            } 
+            kernel_a = new Double(tok.nextToken());
+            kernel_b = new Double(tok.nextToken());
             
             min_pts = new Integer(tok.nextToken());
             convergence_epsilon = new Double(tok.nextToken());
@@ -99,8 +82,7 @@ public class SupportVectorClusteringAdapter extends AmuseTask implements Classif
         }
         
       //Check if all paramters are in range
-        if (kernelType < 0 || kernelType > 2
-        		|| cacheSize < 0 || numSamplePoints < 1
+        if (cacheSize < 0 || numSamplePoints < 1
         		|| min_pts < 0 || p < 0.0 || p > 1.0 || r < -1.0) {
         	throw new NodeException("SVC: One of the parameters was out of range!");
         }
@@ -129,21 +111,16 @@ public class SupportVectorClusteringAdapter extends AmuseTask implements Classif
                 Operator clusterer = OperatorService.createOperator(SVClustering.class);
 
                 // Set the parameters and add the clustering to the process
-                clusterer.setParameter(SVClustering.PARAMETER_KERNEL_TYPE, new Integer(kernelType).toString());
+                clusterer.setParameter(SVClustering.PARAMETER_KERNEL_TYPE, new Integer(3).toString());
                 clusterer.setParameter(SVClustering.PARAMETER_KERNEL_CACHE, new Integer(cacheSize).toString());
                 clusterer.setParameter(SVClustering.PARAMETER_NUMBER_SAMPLE_POINTS, new Double(numSamplePoints).toString());
+                clusterer.setParameter(SVClustering.PARAMETER_KERNEL_A, new Double(kernel_a).toString());
+                clusterer.setParameter(SVClustering.PARAMETER_KERNEL_B, new Double(kernel_b).toString());
                 clusterer.setParameter(SVClustering.MIN_PTS_NAME, new Integer(min_pts).toString());
                 clusterer.setParameter(SVClustering.PARAMETER_CONVERGENCE_EPSILON, new Double(convergence_epsilon).toString());
                 clusterer.setParameter(SVClustering.PARAMETER_MAX_ITERATIONS, new Integer(max_iterations).toString());
                 clusterer.setParameter(SVClustering.PARAMETER_P, new Double(p).toString());
                 clusterer.setParameter(SVClustering.PARAMETER_R, new Double(r).toString());
-                
-                // Set the kernel value according to the kernel type
-                if (kernelType == 1) {
-                	clusterer.setParameter(SVClustering.PARAMETER_KERNEL_GAMMA, new Double(kernel_gamma).toString());
-                } else if (kernelType == 2) {
-                	clusterer.setParameter(SVClustering.PARAMETER_KERNEL_DEGREE, new Integer(kernel_degree).toString());
-                }
                 
                 process.getRootOperator().getSubprocess(0).addOperator(clusterer);
 
