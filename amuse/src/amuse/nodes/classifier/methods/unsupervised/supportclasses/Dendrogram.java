@@ -1,4 +1,4 @@
-package amuse.nodes.classifier.methods.unsupervised;
+package amuse.nodes.classifier.methods.unsupervised.supportclasses;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -13,7 +13,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Level;
 
 import amuse.interfaces.nodes.NodeException;
-import amuse.nodes.classifier.methods.unsupervised.idAndName;
 import amuse.util.AmuseLogger;
 
 public class Dendrogram {

@@ -1225,7 +1225,7 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 	}
 	
 	
-	public void setNumberOfCategories(int numberOfCategories) {
+	protected void setNumberOfCategories(int numberOfCategories) {
 		this.numberOfCategories = numberOfCategories;
 	}
 

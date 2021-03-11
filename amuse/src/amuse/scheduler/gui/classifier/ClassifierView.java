@@ -128,6 +128,12 @@ public class ClassifierView extends JPanel implements HasCaption, NextButtonUsab
         
         viewLeft.add(inputFeaturePanel, "growx, span, wrap");
         addRightSide(modelTypePanel);
+        // Grey out Ground Truth Selection if method type is unsupervised
+        modelTypePanel.getMethodComboBox().addActionListener(e ->{
+        	setChildsEnabled(groundTruthSelectionPanel, 
+        	        (modelTypePanel.getModelType().getMethodType() == MethodType.SUPERVISED));
+        });
+        
         modelTypePanel.addModelTypeListener(trainingAlgorithmFacade);
         addRightSide(trainingAlgorithmFacade.getAlgorithmSelectionComboBox());
         addRightSide(trainingAlgorithmFacade.getParameterPanel());
@@ -146,7 +152,7 @@ public class ClassifierView extends JPanel implements HasCaption, NextButtonUsab
         selectAverageCalculation.setSelected(true);
         
 		trainingDescriptionPanel = new TrainingDescriptionPanel();
-		addRightSide(trainingAlgorithmFacade.getParameterPanel());
+		//addRightSide(trainingAlgorithmFacade.getParameterPanel());
 		addRightSide(targetPathSelectionPanel);
 		addRightSide(trainingDescriptionPanel);
 		splitPane.setDividerLocation(0.5);

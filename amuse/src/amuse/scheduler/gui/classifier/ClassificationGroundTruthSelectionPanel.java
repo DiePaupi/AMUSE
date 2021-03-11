@@ -11,8 +11,15 @@ import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.border.TitledBorder;
 
+import org.apache.log4j.Level;
+
 import amuse.data.GroundTruthSourceType;
+import amuse.data.ModelType.LabelType;
+import amuse.data.ModelType.MethodType;
+import amuse.data.ModelType.RelationshipType;
 import amuse.scheduler.gui.training.CategorySelectionPanel;
+import amuse.scheduler.gui.training.ModelTypeListener;
+import amuse.util.AmuseLogger;
 import net.miginfocom.swing.MigLayout;
 
 public class ClassificationGroundTruthSelectionPanel extends JPanel {

@@ -20,6 +20,9 @@ import amuse.interfaces.nodes.methods.AmuseTask;
 import amuse.nodes.classifier.ClassificationConfiguration;
 import amuse.nodes.classifier.ClassifierNodeScheduler;
 import amuse.nodes.classifier.interfaces.ClassifierUnsupervisedInterface;
+import amuse.nodes.classifier.methods.unsupervised.supportclasses.Dendrogram;
+import amuse.nodes.classifier.methods.unsupervised.supportclasses.Testing;
+import amuse.nodes.classifier.methods.unsupervised.supportclasses.idAndName;
 import amuse.preferences.AmusePreferences;
 import amuse.preferences.KeysStringValue;
 import amuse.util.AmuseLogger;
@@ -36,13 +39,16 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
 	String numericalMeasure;
 	/** Desired cluster number */
 	int k;
+	
+	/** If there's only one song, keep the partitions separated for music segmentation */
+	boolean keepPartitions = false;
 
 	public void setParameters(String parameterString) {
 
         // Should the default parameters be used? Or are values given?
         if(parameterString == "" || parameterString == null) {
         	numericalMeasure = new String("Classic");
-        	// If no desired cluster number is specified the whole dendogram will be created
+        	// If no desired cluster number is specified the whole dendrogram will be created
         	k = 0;
         } else {
         	StringTokenizer tok = new StringTokenizer(parameterString, "_");
@@ -78,16 +84,24 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
 	        DataSet dataSetToClassify = ((DataSetInput)((ClassificationConfiguration)this.correspondingScheduler.
 	         getConfiguration()).getInputToClassify()).getDataSet();
 	        
+	        // TESTING
+	        //dataSetToClassify = Testing.createTestDataSet(dataSetToClassify);
+	        
         	 ArrayList<SongPartitionsDescription> descriptionOfClassifierInput = 
         			 ((ClassifierNodeScheduler)this.correspondingScheduler).getDescriptionOfClassifierInput();
         	
         	int numberOfSongs = descriptionOfClassifierInput.size();
-        	// TODO - Wert eventuell -1 wegen Id oder so
+        	if (numberOfSongs == 1 ) {
+        		keepPartitions = true;
+        	}
         	int numberOfFeatures = dataSetToClassify.getAttributeCount();
         	
-        	if (k < 0 || k >= numberOfSongs) {
+        	if (!keepPartitions && (k < 0 || k >= numberOfSongs)) {
         		throw new NodeException("WardAdapter - classify(): Your given k wasn't in range. "
         				+ "Try something bigger than 0 and smaller than your number of songs.");
+        	} else if (keepPartitions && (k < 0 || k >= descriptionOfClassifierInput.get(0).getStartMs().length)) {
+        		throw new NodeException("WardAdapter - classify(): Your given k wasn't in range. "
+        				+ "Try something bigger than 0 and smaller than your number of songpartitions.");
         	}
         	
         	
@@ -95,49 +109,64 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
         	// (2) Alle Partitionen eines Songs aus dem descriptionOfClassifierInput einem Cluster zuordnen
         	//-----------------------------------------------------------------------------------------------------------------------------
         	
-        	/** allValues contains for each song every feature value based on descriptionOfClassifierInput - [songID][featureValuesOfOneSong] */
-    		double[][] allValues = new double[numberOfSongs][numberOfFeatures];
-    		List<idAndName> songIdsAndNames = new ArrayList<idAndName>();
-    		
-    		// Bilde den Durchschnitt (TODO oder Median) aller Partitionswerte
-    		int partitionsAlreadySeen = 0;
-    		for (int i=0; i < numberOfSongs; i++) {
-    			
-    			int numberOfPartitionsForSongI = descriptionOfClassifierInput.get(i).getStartMs().length;
-    			// Save the song path with it's id
-    			idAndName current = new idAndName(i, descriptionOfClassifierInput.get(i).getPathToMusicSong());
-    			songIdsAndNames.add(current);
-    			
-    			for (int j= partitionsAlreadySeen; j < partitionsAlreadySeen+numberOfPartitionsForSongI; j++) {
-    				for (int x=0; x < numberOfFeatures; x++) {
-    					allValues[i][x] = allValues[i][x] + (double) dataSetToClassify.getAttribute(x).getValueAt(j);
-    				}
-    			}
-    			for (int x=0; x < numberOfFeatures; x++) {
-					allValues[i][x] = allValues[i][x] / numberOfPartitionsForSongI;
-				}
-    			
-    			partitionsAlreadySeen += numberOfPartitionsForSongI;
-    		}
+        	List<idAndName> songIdsAndNames = new ArrayList<idAndName>();
+        	double[][] allValues;
         	
-    		
+        	if (keepPartitions) {
+        		int numberOfPartitions = descriptionOfClassifierInput.get(0).getStartMs().length;
+        		allValues = new double[numberOfPartitions][numberOfFeatures];
+        		
+        		for (int i=0; i<numberOfPartitions; i++) {
+        			idAndName current = new idAndName(i, "Partition "+i);
+        			songIdsAndNames.add(current);
+        			
+        			for (int x=0; x < numberOfFeatures; x++) {
+    					allValues[i][x] = allValues[i][x] + (double) dataSetToClassify.getAttribute(x).getValueAt(i);
+    				}
+        		}
+        		
+        	} else {
+        		/** allValues contains for each song every feature value based on descriptionOfClassifierInput - [songID][featureValuesOfOneSong] */
+        		allValues = new double[numberOfSongs][numberOfFeatures];
+        		
+        		// Bilde den Durchschnitt (TODO oder Median) aller Partitionswerte
+        		int partitionsAlreadySeen = 0;
+        		for (int i=0; i < numberOfSongs; i++) {
+        			
+        			int numberOfPartitionsForSongI = descriptionOfClassifierInput.get(i).getStartMs().length;
+        			// Save the song path with it's id
+        			idAndName current = new idAndName(i, descriptionOfClassifierInput.get(i).getPathToMusicSong());
+        			songIdsAndNames.add(current);
+        			
+        			for (int j= partitionsAlreadySeen; j < partitionsAlreadySeen+numberOfPartitionsForSongI; j++) {
+        				for (int x=0; x < numberOfFeatures; x++) {
+        					allValues[i][x] = allValues[i][x] + (double) dataSetToClassify.getAttribute(x).getValueAt(j);
+        				}
+        			}
+        			for (int x=0; x < numberOfFeatures; x++) {
+    					allValues[i][x] = allValues[i][x] / numberOfPartitionsForSongI;
+    				}
+        			
+        			partitionsAlreadySeen += numberOfPartitionsForSongI;
+        		}
+        	}
+        	
     		/** clusterAffiliation is a list of all clusters which each hold a list with all songs that belong to it */
         	List<List<Integer>> clusterAffiliation = new ArrayList<List<Integer>>();
-        	for (int i=0; i < numberOfSongs; i++) {
+        	int initialClusterNumber = 0;
+        	if (keepPartitions) {
+        		initialClusterNumber = descriptionOfClassifierInput.get(0).getStartMs().length;
+        	} else {
+        		initialClusterNumber = numberOfSongs;
+        	}
+        	for (int i=0; i < initialClusterNumber; i++) {
         		ArrayList<Integer> songsInThatCluster = new ArrayList<Integer>();
         		songsInThatCluster.add(i);
         		
         		clusterAffiliation.add(songsInThatCluster);
         	}
-        	
         	Dendrogram dendo = new Dendrogram(clusterAffiliation, songIdsAndNames);
         	
-        	
-        	
-        	if (k == numberOfSongs) {
-        		// TODO
-        		// return just for every song one cluster
-        	}
         	
         	// UNTIL ALL CLUSTERS HAVE BEEN MERGED
         	int mergeUntilThisClusterNumber;

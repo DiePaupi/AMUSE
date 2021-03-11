@@ -16,6 +16,7 @@ import com.rapidminer.parameter.ParameterType;
 import com.rapidminer.tools.OperatorService;
 import com.rapidminer.tools.math.similarity.DistanceMeasures;
 
+import amuse.data.datasets.ClassifierConfigSet;
 import amuse.data.io.DataSet;
 import amuse.data.io.DataSetInput;
 import amuse.data.io.attributes.Attribute;
@@ -24,6 +25,7 @@ import amuse.interfaces.nodes.NodeException;
 import amuse.interfaces.nodes.methods.AmuseTask;
 import amuse.nodes.classifier.ClassificationConfiguration;
 import amuse.nodes.classifier.interfaces.ClassifierUnsupervisedInterface;
+import amuse.nodes.classifier.methods.unsupervised.supportclasses.Testing;
 import amuse.preferences.AmusePreferences;
 import amuse.preferences.KeysStringValue;
 import amuse.util.AmuseLogger;
@@ -95,6 +97,11 @@ public class FastKMeansAdapter extends AmuseTask implements ClassifierUnsupervis
          getConfiguration()).getInputToClassify()).getDataSet();
 
         try {
+        	//String path = AmusePreferences.get(KeysStringValue.AMUSE_PATH) + File.separator + "experiments" + File.separator + "FastKMeansAdapter_DataSetToClassifyTEST.arff";
+            //CreateProcesedFeaturesTestSet.createTestFile(path);
+            //dataSetToClassify = new DataSet(new File(path));
+        	//dataSetToClassify.saveToArffFile(new File(path));
+            
             /* Create the RapidMiner process */
             Process process = new Process();
 
@@ -184,13 +191,13 @@ public class FastKMeansAdapter extends AmuseTask implements ClassifierUnsupervis
         			amuseDataSet.addAttribute(clusterX);
         		}
         		AmuseLogger.write("FastKMeansAdapter", Level.DEBUG, "FastKMeansAdapter successfully edited the result to AMUSE standad");
-    		
-    		// Give the amuseDataSet to the ClassificationConfiguration so it may be put together and saved there
-            ((ClassificationConfiguration)(this.correspondingScheduler.getConfiguration())).setInputToClassify(new DataSetInput(amuseDataSet));
             
             // Save to .arff file
             String outputPath = AmusePreferences.get(KeysStringValue.AMUSE_PATH) + File.separator + "experiments" + File.separator + "FastKMeansAdapter_Result.arff";
             amuseDataSet.saveToArffFile(new File(outputPath));
+            
+            // Give the amuseDataSet to the ClassificationConfiguration so it may be put together and saved there
+            ((ClassificationConfiguration)(this.correspondingScheduler.getConfiguration())).setInputToClassify(new DataSetInput(amuseDataSet));
 
         } catch(Exception e) {
             throw new NodeException("Error clustering data: " + e.getMessage());

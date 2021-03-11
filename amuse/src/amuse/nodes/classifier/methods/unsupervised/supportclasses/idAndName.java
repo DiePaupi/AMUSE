@@ -1,4 +1,4 @@
-package amuse.nodes.classifier.methods.unsupervised;
+package amuse.nodes.classifier.methods.unsupervised.supportclasses;
 
 /**
  * Data tuple consisting of an (int) ID and a (String) name

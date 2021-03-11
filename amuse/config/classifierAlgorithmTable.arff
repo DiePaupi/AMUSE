@@ -7,7 +7,7 @@
 % Algorithm name
 @ATTRIBUTE Name STRING
 % Algorithm category
-@ATTRIBUTE Category {"Unsupervised>Partitional", "Unsupervised>Hierarchical", "Supervised", "Supervised>Trees", "Mixed"}
+@ATTRIBUTE Category {"Unsupervised", "Unsupervised>Partitional", "Unsupervised>Hierarchical", "Supervised", "Supervised>Trees", "Mixed"}
 % Java class which runs classification training
 @ATTRIBUTE TrainerAdapterClass STRING
 % Java class which runs classification
@@ -73,4 +73,4 @@
 
 12, "Support Vector Clustering (Neural)", "Unsupervised>Partitional", amuse.nodes.classifier.methods.unsupervised.SVCNeuralAdapter, amuse.nodes.classifier.methods.unsupervised.SVCNeuralAdapter, "RapidMiner9", -1,-1,-1,-1,-1, "Unsupervised Support Vector Clustering for the kernel type neural from RapidMiner", "Cache size:|Number of sample points:|Kernel a:|Kernel b:|Min number of points:|Convergence epsilon:|Max iterations:|p:|r:", "[%i %i %d %d %i %d %i %d %d]", "[200_20_1.0_0.0_2_0.001_100000_0.0_-1.0]", "Size of the cache for kernel evaluations in MB|The number of virtual sample points to check for neighborship|The SVM kernel parameter a|The SVM kernel parameter b|The minimal number of points in each cluster|Precision on the KKT conditions|Stop after this many iterations|The fraction of allowed outliers|Use this radius instead of the calculated one (-1 for calculated radius)", 1,1,1,0,1,0,1,0
 
-13, "Ward's Agglomeration", "Unsupervised>Hierarchical", amuse.nodes.classifier.methods.unsupervised.WardAdapter, amuse.nodes.classifier.methods.unsupervised.WardAdapter, "", -1,-1,-1,-1,-1, "Clustering using Wards Agglomeration", "Numerical Measure:|k:", "[%n{LWDissimilarityUpdateFormula,Classic} %i]", "[Classic_0]", "The numerical measure to be used|The desired number of clusters", 1,1,1,0,1,0,1,0
+13, "Ward's Agglomeration", "Unsupervised", amuse.nodes.classifier.methods.unsupervised.WardAdapter, amuse.nodes.classifier.methods.unsupervised.WardAdapter, "", -1,-1,-1,-1,-1, "Clustering using Wards Agglomeration", "Numerical Measure:|k:", "[%n{LWDissimilarityUpdateFormula,Classic} %i]", "[Classic_0]", "The numerical measure to be used|The desired number of clusters", 1,1,1,0,1,0,1,0
