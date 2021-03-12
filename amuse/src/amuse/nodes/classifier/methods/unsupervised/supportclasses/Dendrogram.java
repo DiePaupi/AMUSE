@@ -485,6 +485,8 @@ public class Dendrogram {
 				// If we have reached the end of the song name there'll be a /
 				if (name[c] == '/') {
 					break;
+				} else if (name[c] == '_') {
+					result = '-' + result;
 				} else {
 					result = name[c] + result;
 				}

@@ -1266,8 +1266,8 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 			String sep = System.getProperty("line.separator");
 			fileWriter = new BufferedWriter(new FileWriter(visualOutput));
 			
-		AmuseLogger.write("ClassifierNodeScheduler - createVisual(...)", Level.DEBUG, "Now writing header.");
-			String fileHead = "\\documentclass[12pt,border=10pt]{standalone} " + sep + sep
+			String fileHead = "\\documentclass[12pt,border=10pt]{standalone} " + sep 
+					+ "\\usepackage{booktabs} " + sep
 					+ "\\begin{document} " +sep;
 			fileWriter.append( fileHead );
 			
@@ -1283,7 +1283,6 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 			fileWriter.append( tabularStart );
 			fileWriter.append( "      " + clusterNames );
 		
-		AmuseLogger.write("ClassifierNodeScheduler - createVisual(...)", Level.DEBUG, "Now getting the clusters (and its members).");
 			List<List<String>> allClustersAndTheirMembers = new ArrayList<List<String>>();
 			// GET THE NAMES OF THE SONGS BELONGING TO A CLUSTER
 			for (int cluster = 0; cluster < numberOfCategories; cluster++) {
@@ -1324,7 +1323,7 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 							}
 						}
 						
-						if (clusterCertanty == 1.0) {
+						if (clusterCertanty > 0.99) {
 							thisClustersMembers.add(nameOfThisSong + "$^{\\ast}$");
 						} else {
 							thisClustersMembers.add(nameOfThisSong);
@@ -1341,7 +1340,7 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 					maxMemberCount = allClustersAndTheirMembers.get(clusters).size();
 				}
 			}
-		AmuseLogger.write("ClassifierNodeScheduler - createVisual(...)", Level.DEBUG, "There are " + maxMemberCount + " members in a cluster.");
+		AmuseLogger.write("ClassifierNodeScheduler - createVisual(...)", Level.DEBUG, "There are max" + maxMemberCount + " members in a cluster.");
 		
 			// Fill other clusters up
 			for (int clusters=0; clusters < allClustersAndTheirMembers.size();  clusters++) {
@@ -1352,7 +1351,6 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 					}
 				}
 			}
-		AmuseLogger.write("ClassifierNodeScheduler - createVisual(...)", Level.DEBUG, "All Clusters have been filled up.");
 			
 			String table = "";
 			for (int members = 0; members < maxMemberCount; members++) {

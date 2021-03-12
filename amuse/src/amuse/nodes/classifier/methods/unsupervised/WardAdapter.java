@@ -95,6 +95,7 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
         		keepPartitions = true;
         	}
         	int numberOfFeatures = dataSetToClassify.getAttributeCount();
+        	AmuseLogger.write("WardAdapter - initializing", Level.DEBUG, "There are " + numberOfFeatures + " to be saved.");
         	
         	if (!keepPartitions && (k < 0 || k >= numberOfSongs)) {
         		throw new NodeException("WardAdapter - classify(): Your given k wasn't in range. "
@@ -248,7 +249,7 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
             	try {
             		dendo.setNewMerge(clusterToBeMergedA, clusterToBeMergedB, mergedCluster);
             	} catch (Exception e) {
-        			AmuseLogger.write("WardAdapter", Level.WARN, "The dendogram coudn't set a new merge: " + e.getMessage());
+        			AmuseLogger.write("WardAdapter - dissMatrix", Level.WARN, "The dendogram coudn't set a new merge: " + e.getMessage());
         		}
             	
             	clusterAffiliation.add(mergedCluster);
@@ -295,6 +296,11 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
                     	} else {
                     		throw new NodeException("Error classifying data with the WardAdapter: The numerical measure couldn't be identified");
                     	}
+                    	
+                    	if (dissimilarity == 0.0) {
+            				AmuseLogger.write("WardAdapter - dissArray", Level.WARN, "The dissimilarity wasn't calculated correctly!");
+            			}
+                    	dissimilarityBetweenMergedClusterAndTheOthers[m] = dissimilarity;
                 	}
                 	
                 	
@@ -307,7 +313,6 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
                 			minDisValue = dissimilarityBetweenMergedClusterAndTheOthers[m];
                 		}
                 	}
-                	
                 	
                 	// Is the next best merge is with the justMerged cluster, merge again!
                 	// If not, then continue to the next iteration
@@ -377,6 +382,7 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
     			amuseDataSet.addAttribute(featureX);
     			
     		}
+    		
     		for (int c=0; c < clusterAffiliation.size(); c++ ) {
     			List<Double> clusterCList = new ArrayList<Double>();
     			
