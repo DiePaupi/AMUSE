@@ -23,10 +23,13 @@
  */ 
 package amuse.nodes.classifier;
 
+import java.io.BufferedWriter;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.util.ArrayList;
@@ -1113,7 +1116,8 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 		try {
 			String classificationOutput = ((ClassificationConfiguration)taskConfiguration).getClassificationOutput();
 			File classifierResultFile = new File(classificationOutput);
-			if (classifierResultFile.exists())
+			
+			if (classifierResultFile.exists()) 
 				if (!classifierResultFile.canWrite()) {
 					throw new NodeException("Cannot save classification results");
 				}
@@ -1151,10 +1155,14 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 	        
 			// If the partition classifications should be combined
 			if(((ClassificationConfiguration)taskConfiguration).getMergeSongResults().equals(new Integer("1"))) {
+				List<String> songNames = new ArrayList<String>();
+				List<double[]> clusterAffiliations = new ArrayList<double[]>();
 				
 				// Go through all songs
 				for(int i=0;i<classifierResult.size();i++) {
 					String currentSongName = classifierResult.get(i).getPathToMusicSong();
+					songNames.add(i, currentSongName);
+					double[] currentSongsClusterAffiliations = new double[numberOfCategories];
 					
 					// Save the results
 					values_writer.writeBytes(descriptionOfClassifierInput.get(i).getSongId() + ",'" + currentSongName + "',-1,-1");
@@ -1167,14 +1175,19 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 							meanRelationship += classifierResult.get(i).getRelationships()[j][category];
 						}
 						meanRelationship /= classifierResult.get(i).getRelationships().length;
+						currentSongsClusterAffiliations[category] = meanRelationship;
 						values_writer.writeBytes("," + meanRelationship);
 					}
 					
+					clusterAffiliations.add(i, currentSongsClusterAffiliations);
 					values_writer.writeBytes(sep);
 				}
+				
+				this.createVisual(songNames, clusterAffiliations, classificationOutput + "_visual.tex");
 			}
 			// If the classification results for each partition should be saved
 			else {
+				
 				// Go through all songs
 				for(int i=0;i<classifierResult.size();i++) {
 					String currentSongName = classifierResult.get(i).getPathToMusicSong();
@@ -1193,6 +1206,25 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 						
 						values_writer.writeBytes(sep);
 					}
+					
+				}
+				
+				if (classifierResult.size() == 1) {
+					List<String> songNames = new ArrayList<String>();
+					List<double[]> clusterAffiliations = new ArrayList<double[]>();
+					
+					for (int partitions = 0; partitions < classifierResult.get(0).getRelationships().length; partitions++) {
+						double[] currentSongsClusterAffiliations = new double[numberOfCategories];
+						
+						for(int category=0;category<numberOfCategories;category++) {
+							currentSongsClusterAffiliations[category] = classifierResult.get(0).getRelationships()[partitions][category];
+						}
+						
+						clusterAffiliations.add(partitions, currentSongsClusterAffiliations);
+					}
+					
+					songNames.add(classifierResult.get(0).getPathToMusicSong());
+					this.createVisual(songNames, clusterAffiliations, classificationOutput + "_visual.tex");
 				}
 			}
 			values_writer.close();
@@ -1222,6 +1254,136 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 				AmuseLogger.write(ClassifierNodeScheduler.class.getName(), Level.DEBUG, "There were "+ clusterNumber +" Clusters detected.");
 				numberOfCategories = clusterNumber;
 			}
+	}
+	
+	
+	private void createVisual(List<String> songNames, List<double[]> clusterAffiliations, String path) {
+		
+		AmuseLogger.write("ClassifierNodeScheduler - createVisual(...)", Level.DEBUG, "STARTING for output path: " + path);
+		File visualOutput = new File(path);
+		try {
+			BufferedWriter fileWriter;
+			String sep = System.getProperty("line.separator");
+			fileWriter = new BufferedWriter(new FileWriter(visualOutput));
+			
+		AmuseLogger.write("ClassifierNodeScheduler - createVisual(...)", Level.DEBUG, "Now writing header.");
+			String fileHead = "\\documentclass[12pt,border=10pt]{standalone} " + sep + sep
+					+ "\\begin{document} " +sep;
+			fileWriter.append( fileHead );
+			
+			String tabularStart = "   \\begin{tabular}{";
+			String clusterNames = "";
+			for (int c=0; c < numberOfCategories-1; c++) {
+				tabularStart += "c";
+				clusterNames += "\\multicolumn{1}{c}{\\textbf{Cluster " + c + "}} & ";
+			}
+			tabularStart += "c} " + sep + "   \\toprule " + sep;
+			clusterNames += "      \\multicolumn{1}{c}{\\textbf{Cluster " + (numberOfCategories-1) + "}} \\" + "\\ " + sep 
+							+ "   \\midrule " + sep;
+			fileWriter.append( tabularStart );
+			fileWriter.append( "      " + clusterNames );
+		
+		AmuseLogger.write("ClassifierNodeScheduler - createVisual(...)", Level.DEBUG, "Now getting the clusters (and its members).");
+			List<List<String>> allClustersAndTheirMembers = new ArrayList<List<String>>();
+			// GET THE NAMES OF THE SONGS BELONGING TO A CLUSTER
+			for (int cluster = 0; cluster < numberOfCategories; cluster++) {
+				List<String> thisClustersMembers = new ArrayList<String>();
+				
+				// Go trough the songs / partitions
+				for (int song = 0; song < clusterAffiliations.size(); song++) {
+					
+					// IS THE CURRENT SONG (No. song) IN THIS CLUSTER (No. cluster)?
+					int clusterOfThisSong = 0;
+					double clusterCertanty = clusterAffiliations.get(song)[0];
+					for (int clusterAgain = 0; clusterAgain < numberOfCategories; clusterAgain++) {
+						if (clusterCertanty < clusterAffiliations.get(song)[clusterAgain]) {
+							clusterCertanty = clusterAffiliations.get(song)[clusterAgain];
+							clusterOfThisSong = clusterAgain;
+						}
+					}
+					
+					// ADD THE SONGNAME (IF APPROPRIATE) AS A MEMBER OF THIS CLUSTER (No. cluster)
+					//classifierResult.get(song).getLabels()[cluster].substring(classifierResult.get(song).getLabels()[cluster].length()-1).equals(cluster)
+					if (clusterOfThisSong == cluster) {
+						String nameOfThisSong = "";
+						
+						if (songNames.size() == 1) {
+							nameOfThisSong = "Partition " + song;
+						} else {
+							char[] name = songNames.get(song).toCharArray();
+							// Ignore the last 4 chars as they are something like ".mp3" or ".wav"
+							for (int positionInString = name.length -5; positionInString >= 0; positionInString--) {
+								// If we have reached the end of the song name there'll be a /
+								if (name[positionInString] == '/') {
+									break;
+								} else if (name[positionInString] == '_') {
+									nameOfThisSong = "-" + nameOfThisSong;
+								} else {
+									nameOfThisSong = name[positionInString] + nameOfThisSong;
+								}
+							}
+						}
+						
+						if (clusterCertanty == 1.0) {
+							thisClustersMembers.add(nameOfThisSong + "$^{\\ast}$");
+						} else {
+							thisClustersMembers.add(nameOfThisSong);
+						}
+					}
+					
+				}
+				allClustersAndTheirMembers.add(thisClustersMembers);
+			}
+			
+			int maxMemberCount = 0;
+			for (int clusters=0; clusters < allClustersAndTheirMembers.size();  clusters++) {
+				if (maxMemberCount < allClustersAndTheirMembers.get(clusters).size()) {
+					maxMemberCount = allClustersAndTheirMembers.get(clusters).size();
+				}
+			}
+		AmuseLogger.write("ClassifierNodeScheduler - createVisual(...)", Level.DEBUG, "There are " + maxMemberCount + " members in a cluster.");
+		
+			// Fill other clusters up
+			for (int clusters=0; clusters < allClustersAndTheirMembers.size();  clusters++) {
+				if (allClustersAndTheirMembers.get(clusters).size() < maxMemberCount) {
+					int difference = maxMemberCount - allClustersAndTheirMembers.get(clusters).size();
+					for (int diff = 0; diff < difference; diff++) {
+						allClustersAndTheirMembers.get(clusters).add(null);
+					}
+				}
+			}
+		AmuseLogger.write("ClassifierNodeScheduler - createVisual(...)", Level.DEBUG, "All Clusters have been filled up.");
+			
+			String table = "";
+			for (int members = 0; members < maxMemberCount; members++) {
+				String tableLine = "      ";
+				
+				for (int clusters=0; clusters < allClustersAndTheirMembers.size()-1;  clusters++) {
+					// If the clusters still has a member
+					if (allClustersAndTheirMembers.get(clusters).get(members) != null) {
+						tableLine += allClustersAndTheirMembers.get(clusters).get(members) + " & ";
+					} else {
+						tableLine += " & ";
+					}
+				}
+				if (allClustersAndTheirMembers.get(allClustersAndTheirMembers.size()-1).get(members) != null) {
+					tableLine += allClustersAndTheirMembers.get(allClustersAndTheirMembers.size()-1).get(members) + " \\" + "\\";
+				} else {
+					tableLine += " \\" + "\\";
+				}
+				
+				table += tableLine + sep;
+			}
+			
+			fileWriter.append( table );
+			
+			String end = "   \\bottomrule" + sep + "   \\end{tabular}" + sep + "\\end{document}" ;
+			fileWriter.append( end );
+			fileWriter.close();
+			
+		} catch (Exception e) {
+			AmuseLogger.write(ClassifierNodeScheduler.class.getName(), Level.WARN, "Classifier visual couldn't be created: " +e);
+		}
 	}
 	
 	
