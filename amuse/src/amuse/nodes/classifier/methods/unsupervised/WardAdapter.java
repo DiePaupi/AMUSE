@@ -309,15 +309,15 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
         		/** The dissimilarityMatrix stores the ESS values for the centroid of cluster m united with cluster n */
     			double[][] dissimilarityMatrix = calculateDissimilarityMatrix();
         	
-    			String matrix = "";
-    	    	for (int n=0; n < dissimilarityMatrix.length; n++) {
-    	    		matrix += n + ": ";
-    	    		for (int m=0; m < dissimilarityMatrix.length; m++) {
-    	    			matrix += dissimilarityMatrix[m][n] + ", ";
-    	    		}
-    	    		matrix += "\n";
-    	    	}
-    	    	AmuseLogger.write("WardAdapter - LWUF", Level.DEBUG, "Starting the LWUF recursion with: \n" + matrix);
+    			//String matrix = "";
+    			//for (int n=0; n < dissimilarityMatrix.length; n++) {
+    			//	matrix += n + ": ";
+    			//	for (int m=0; m < dissimilarityMatrix.length; m++) {
+    			//		matrix += dissimilarityMatrix[m][n] + ", ";
+    			//	}
+    			//	matrix += "\n";
+    			//}
+    			//AmuseLogger.write("WardAdapter - LWUF", Level.DEBUG, "Starting the LWUF recursion with: \n" + matrix);
     	    	
     			this.updateDissimilarityMatrix(dissimilarityMatrix);
         	}
@@ -458,10 +458,10 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
 			double[][] dissimilarityMatrixMinValues = calculateMininimum (dissimilarityMatrix);
 			
 			// Calculate the centroids of the clusters to be merged
-			double[] centroidM = this.calculateCentroid(clusterAffiliation.get((int) dissimilarityMatrixMinValues[1][0]));
-			int sizeM = clusterAffiliation.get((int) dissimilarityMatrixMinValues[1][0]).size();
-			double[] centroidN = this.calculateCentroid(clusterAffiliation.get((int) dissimilarityMatrixMinValues[0][0]));
-			int sizeN = clusterAffiliation.get((int) dissimilarityMatrixMinValues[0][0]).size();
+			double[] centroidA = this.calculateCentroid(clusterAffiliation.get((int) dissimilarityMatrixMinValues[1][0]));
+			int sizeA = clusterAffiliation.get((int) dissimilarityMatrixMinValues[1][0]).size();
+			double[] centroidB = this.calculateCentroid(clusterAffiliation.get((int) dissimilarityMatrixMinValues[0][0]));
+			int sizeB = clusterAffiliation.get((int) dissimilarityMatrixMinValues[0][0]).size();
 
 			int minIndex = 0;
 			int maxIndex = 0;
@@ -473,7 +473,7 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
 				maxIndex = (int) dissimilarityMatrixMinValues[1][0];
 			}
 			AmuseLogger.write("WardAdapter - LUWF", Level.DEBUG, "The current indizes are min = " + minIndex + " and max = " + maxIndex);
-			AmuseLogger.write("WardAdapter - LWUF", Level.DEBUG, "Amount of clusters before merge: " + clusterAffiliation.size());
+			//AmuseLogger.write("WardAdapter - LWUF", Level.DEBUG, "Amount of clusters before merge: " + clusterAffiliation.size());
 		
 			// Merge clusters
 			List<Integer> clusterToBeMergedA = clusterAffiliation.get((int) dissimilarityMatrixMinValues[1][0]);
@@ -493,7 +493,7 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
 			// Das Cluster wird an dem minIndex eingefügt
 			clusterAffiliation.add(minIndex, mergedCluster); 
 			AmuseLogger.write("WardAdapter - LWUF", Level.DEBUG, "The clusters were merged and added to postiton " + minIndex);
-			AmuseLogger.write("WardAdapter - LWUF", Level.DEBUG, "Amount of clusters after merge: " + clusterAffiliation.size());
+			//AmuseLogger.write("WardAdapter - LWUF", Level.DEBUG, "Amount of clusters after merge: " + clusterAffiliation.size());
 			
 			// UPDATE THE MATRIX
 			double[][] updatedMatrix = new double[clusterAffiliation.size()][clusterAffiliation.size()];
@@ -503,7 +503,7 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
 	    		for (int n=0; n < clusterAffiliation.size(); n++) {
 	    			
 	    			// Falls es sich um dasselbe Cluster handelt, wird der Wert in der Matirx auf 0 gesetzt
-	        		if (n == m) {
+	    			if (n == m) {
 	        			updatedMatrix[m][n] = 0.0;
 	        		} 
 	        		// Falls die MatrixDiagonale überschritten wird doppeln sich die Werte und werden aus Effizenzgründen nicht erneut berechnet
@@ -515,15 +515,16 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
 	        			if (m == minIndex || n == minIndex) {
 	        				double[] centroidK;
 	        				int sizeK;
+	        				// If m is the merged cluster, get the other one (n) as k!
 	        				if (m == minIndex) {
-	        					centroidK = this.calculateCentroid(clusterAffiliation.get(m));
-	        					sizeK = clusterAffiliation.get(m).size();
-	        				} else { 
 	        					centroidK = this.calculateCentroid(clusterAffiliation.get(n));
 	        					sizeK = clusterAffiliation.get(n).size();
+	        				} else { 
+	        					centroidK = this.calculateCentroid(clusterAffiliation.get(m));
+	        					sizeK = clusterAffiliation.get(m).size();
 	        				}
 	        				
-	        				updatedMatrix[m][n] = this.calculateLWDissimilarity(centroidM, sizeM, centroidN, sizeN, centroidK, sizeK);
+	        				updatedMatrix[m][n] = this.calculateLWDissimilarity(centroidA, sizeA, centroidB, sizeB, centroidK, sizeK);
 	        				if (updatedMatrix[m][n] == 0.0) {
         						AmuseLogger.write("WardAdapter - LWDU", Level.WARN, "The updated dissimilarity wasn't calculated correctly!");
         					}
@@ -550,15 +551,15 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
 	    		}
 			}
 	    	
-	    	String matrix = "";
-	    	for (int n=0; n < updatedMatrix.length; n++) {
-	    		matrix += n + ": ";
-	    		for (int m=0; m < updatedMatrix.length; m++) {
-	    			matrix += updatedMatrix[m][n] + ", ";
-	    		}
-	    		matrix += "\n";
-	    	}
-	    	AmuseLogger.write("WardAdapter - LWUF", Level.DEBUG, "The matrix was updated: \n" + matrix);
+	    	//String matrix = "";
+	    	//for (int n=0; n < updatedMatrix.length; n++) {
+	    	//	matrix += n + ": ";
+	    	//	for (int m=0; m < updatedMatrix.length; m++) {
+	    	//		matrix += updatedMatrix[m][n] + ", ";
+	    	//	}
+	    	//	matrix += "\n";
+	    	//}
+	    	//AmuseLogger.write("WardAdapter - LWUF", Level.DEBUG, "The matrix was updated: \n" + matrix);
 	    	
 	    	this.updateDissimilarityMatrix(updatedMatrix);
 		}
@@ -672,8 +673,9 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
 		//AmuseLogger.write("WardAdapter - LWDU", Level.DEBUG, "Calculating beta as: " + beta + " * " + sedB);
 		beta = beta * sedB;
 		
-		//AmuseLogger.write("WardAdapter - LWDU", Level.DEBUG, "Updated dissimilarity will be: " + alphaFirst + " + " + alphaSecond + " - " + beta);
-		return alphaFirst + alphaSecond - beta;
+		double result = alphaFirst + alphaSecond - beta;
+		AmuseLogger.write("WardAdapter - LWDU", Level.DEBUG, "Updated dissimilarity will be: " +alphaFirst+" + "+alphaSecond+" - "+beta +" = "+result);
+		return result;
 	}
 	
 	
