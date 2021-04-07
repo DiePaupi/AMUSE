@@ -113,7 +113,7 @@ public class SVCNeuralAdapter extends AmuseTask implements ClassifierUnsupervise
                 // Set the parameters and add the clustering to the process
                 clusterer.setParameter(SVClustering.PARAMETER_KERNEL_TYPE, new Integer(3).toString());
                 clusterer.setParameter(SVClustering.PARAMETER_KERNEL_CACHE, new Integer(cacheSize).toString());
-                clusterer.setParameter(SVClustering.PARAMETER_NUMBER_SAMPLE_POINTS, new Double(numSamplePoints).toString());
+                clusterer.setParameter(SVClustering.PARAMETER_NUMBER_SAMPLE_POINTS, new Integer(numSamplePoints).toString());
                 clusterer.setParameter(SVClustering.PARAMETER_KERNEL_A, new Double(kernel_a).toString());
                 clusterer.setParameter(SVClustering.PARAMETER_KERNEL_B, new Double(kernel_b).toString());
                 clusterer.setParameter(SVClustering.MIN_PTS_NAME, new Integer(min_pts).toString());

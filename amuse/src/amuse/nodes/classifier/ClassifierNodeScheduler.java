@@ -292,6 +292,11 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 			}
 			
 			List<Integer> attributesToIgnore = ((ClassificationConfiguration)this.taskConfiguration).getAttributesToIgnore();
+			String attIgn = "";
+			for (int att=0; att < attributesToIgnore.size(); att++) {
+				attIgn +=  attributesToIgnore.get(att) + ", ";
+			}
+			AmuseLogger.write("ClassifierNodeScheduler", Level.WARN, "Attributes to ignore: " + attIgn);
 			
 			//?
 			DataSetAbstract categoryList = null;

@@ -93,4 +93,8 @@ public class ModelTypePanel extends JPanel {
 			listener.updateModelType((RelationshipType)relationshipComboBox.getSelectedItem(), (LabelType)labelComboBox.getSelectedItem(), (MethodType)methodComboBox.getSelectedItem());
 		}
 	}
+	
+	public JComboBox getMethodComboBox () {
+		return methodComboBox;
+	}
 }

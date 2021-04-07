@@ -89,7 +89,9 @@ public class SupportVectorClusteringAdapter extends AmuseTask implements Classif
             	kernel_gamma = new Double(tok.nextToken());
             } else if (kernelType == 2) {
             	kernel_degree = new Integer(tok.nextToken());
-            } 
+            } else {
+            	tok.nextToken(); // For kernel type = dot, skip this parameter
+            }
             
             min_pts = new Integer(tok.nextToken());
             convergence_epsilon = new Double(tok.nextToken());
@@ -131,7 +133,7 @@ public class SupportVectorClusteringAdapter extends AmuseTask implements Classif
                 // Set the parameters and add the clustering to the process
                 clusterer.setParameter(SVClustering.PARAMETER_KERNEL_TYPE, new Integer(kernelType).toString());
                 clusterer.setParameter(SVClustering.PARAMETER_KERNEL_CACHE, new Integer(cacheSize).toString());
-                clusterer.setParameter(SVClustering.PARAMETER_NUMBER_SAMPLE_POINTS, new Double(numSamplePoints).toString());
+                clusterer.setParameter(SVClustering.PARAMETER_NUMBER_SAMPLE_POINTS, new Integer(numSamplePoints).toString());
                 clusterer.setParameter(SVClustering.MIN_PTS_NAME, new Integer(min_pts).toString());
                 clusterer.setParameter(SVClustering.PARAMETER_CONVERGENCE_EPSILON, new Double(convergence_epsilon).toString());
                 clusterer.setParameter(SVClustering.PARAMETER_MAX_ITERATIONS, new Integer(max_iterations).toString());
@@ -155,7 +157,7 @@ public class SupportVectorClusteringAdapter extends AmuseTask implements Classif
                 OutputPort processOutputPort = process.getRootOperator().getSubprocess(0).getInnerSources().getPortByIndex(0);
                 processOutputPort.connectTo(clustererInputPort);
                 clustererOutputPort.connectTo(processInputPort);
-                	//AmuseLogger.write("XMeansAdapter", Level.DEBUG, "Ports were connected");
+                	AmuseLogger.write("XMeansAdapter", Level.DEBUG, "Ports were connected");
 
             // Run the RapidMiner-Process - XMeans needs an ExampleSet so it's being converted here
             ExampleSet exampleSet = dataSetToClassify.convertToRapidMinerExampleSet();

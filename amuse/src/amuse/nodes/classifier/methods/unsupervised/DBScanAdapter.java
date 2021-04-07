@@ -77,6 +77,9 @@ public class DBScanAdapter extends AmuseTask implements ClassifierUnsupervisedIn
          getConfiguration()).getInputToClassify()).getDataSet();
 
         try {
+        	//String path = AmusePreferences.get(KeysStringValue.AMUSE_PATH) + File.separator + "experiments" + File.separator + "DBScan_DataSetToClassifyTEST.arff";
+        	//dataSetToClassify.saveToArffFile(new File(path));
+        	
             /* Create the RapidMiner process */
             Process process = new Process();
 

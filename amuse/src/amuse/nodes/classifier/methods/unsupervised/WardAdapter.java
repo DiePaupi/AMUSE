@@ -36,12 +36,18 @@ import amuse.util.LibraryInitializer;
 public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInterface {
 	
 	/** Defines the numerical measure option (e.g. euclidean distance) */
-	String numericalMeasure;
+	private String numericalMeasure;
 	/** Desired cluster number */
-	int k;
-	
+	private int k;
 	/** If there's only one song, keep the partitions separated for music segmentation */
-	boolean keepPartitions = false;
+	private boolean keepPartitions = false;
+	
+	/** Contains the values for every song and their features */
+	private double[][] allValues;
+	/** */
+	private List<List<Integer>> clusterAffiliation;
+	/** */
+	private Dendrogram dendo;
 
 	public void setParameters(String parameterString) {
 
@@ -111,7 +117,6 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
         	//-----------------------------------------------------------------------------------------------------------------------------
         	
         	List<idAndName> songIdsAndNames = new ArrayList<idAndName>();
-        	double[][] allValues;
         	
         	if (keepPartitions) {
         		int numberOfPartitions = descriptionOfClassifierInput.get(0).getStartMs().length;
@@ -153,7 +158,7 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
         	}
         	
     		/** clusterAffiliation is a list of all clusters which each hold a list with all songs that belong to it */
-        	List<List<Integer>> clusterAffiliation = new ArrayList<List<Integer>>();
+        	clusterAffiliation = new ArrayList<List<Integer>>();
         	int initialClusterNumber = 0;
         	if (keepPartitions) {
         		initialClusterNumber = descriptionOfClassifierInput.get(0).getStartMs().length;
@@ -166,7 +171,7 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
         		
         		clusterAffiliation.add(songsInThatCluster);
         	}
-        	Dendrogram dendo = new Dendrogram(clusterAffiliation, songIdsAndNames);
+        	dendo = new Dendrogram(clusterAffiliation, songIdsAndNames);
         	
         	
         	// UNTIL ALL CLUSTERS HAVE BEEN MERGED
@@ -177,84 +182,36 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
         	AmuseLogger.write("WardAdapter", Level.DEBUG, "(3) The merge until this cluster number parameter is " +mergeUntilThisClusterNumber+ " - "
         			+ "Starting the while loop with: while (" +clusterAffiliation.size()+ " > " +mergeUntilThisClusterNumber+ ");");
         	
-    		while (clusterAffiliation.size() > mergeUntilThisClusterNumber) {
+        	if (numericalMeasure.equals("Classic")) {
         		
+        		while (clusterAffiliation.size() > mergeUntilThisClusterNumber) {        		
         		//-----------------------------------------------------------------------------------------------------------------------------
             	// (3) Berechne die (un-)ähnlichkeits Matrix aller Songs mit der Lance-William Sache
             	//	   Hier vielleicht auch Wahl zwischen LW und Klassisch lassen
             	//-----------------------------------------------------------------------------------------------------------------------------
         		
-        		/** The dissimilarityMatrix stores the ESS values for the centroid of cluster m united with cluster n */
-            	double[][] dissimilarityMatrix = new double[clusterAffiliation.size()][clusterAffiliation.size()];
-            		
-            	// m sind die Splaten und n die Zeilen
-            	for (int m=0; m < clusterAffiliation.size(); m++) {
-            		
-            		// Damit der centroid nicht jedes Mal neu berechnet werden muss geschieht dies einmal hier 
-            		double[] centroidM = this.calculateCentroid(allValues, clusterAffiliation.get(m));
-            		
-            		for (int n=0; n < clusterAffiliation.size(); n++) {
-            			
-            			// Falls es sich um dasselbe Cluster handelt, wird der Wert in der Matirx auf 0 gesetzt
-                		if (n == m) {
-                			dissimilarityMatrix[m][n] = 0.0;
-                		} 
-                		// Falls die MatrixDiagonale überschritten wird doppeln sich die Werte und werden aus Effizenzgründen nicht erneut berechnet
-                		else if (n < m) {
-                			dissimilarityMatrix[m][n] = dissimilarityMatrix[n][m];
-                		} else {
-                			
-                			//AmuseLogger.write("WardAdapter", Level.DEBUG, "Statring to calculate the DISSIMILARITY for n=" +n+ " and m=" +m);
-                			
-                			double dissimilarity = 0.0;
-                			double[] centroidN = this.calculateCentroid(allValues, clusterAffiliation.get(n));
-            				
-                			if (numericalMeasure.equals("LWDissimilarityUpdateFormula")) {
-                				
-                				AmuseLogger.write("WardAdapter", Level.DEBUG, "Using the LWDUF method.");
-                				
-                				//dissimilarity = this.calculateLWDissimilarity(
-                    			//		centroidN, clusterAffiliation.get(n).size(), 
-                    			//		centroidM, clusterAffiliation.get(m).size(), 
-                    			//		centroidC, sizeC)
-                    			
-                			} else if (numericalMeasure.equals("Classic")) {
-                				
-                				dissimilarity = this.calculateClassicDissimilarity(
-                    					centroidN, clusterAffiliation.get(n).size(), 
-                    					centroidM, clusterAffiliation.get(m).size());
-                				
-                			} else {
-                				throw new NodeException("Error classifying data with the WardAdapter: The numerical measure couldn't be identified");
-                			}
-                			
-                			if (dissimilarity == 0.0) {
-                				AmuseLogger.write("WardAdapter", Level.WARN, "The dissimilarity wasn't calculated correctly!");
-                			}
-                			dissimilarityMatrix[m][n] = dissimilarity;
-                		}
-                	}
-            	}
+        			/** The dissimilarityMatrix stores the ESS values for the centroid of cluster m united with cluster n */
+        			double[][] dissimilarityMatrix = calculateDissimilarityMatrix();
             	
-            	// Get the minimum (in the first row) and the second minimum (in the second row) and the corresponding m and n values
-            	double[][] dissimilarityMatrixMinValues = calculateMininimum (dissimilarityMatrix);
+        			// Get the minimum (in the first row) and the second minimum (in the second row) and the corresponding m and n values
+        			double[][] dissimilarityMatrixMinValues = calculateMininimum (dissimilarityMatrix);
             	
-            	// Merge clusters
-            	List<Integer> clusterToBeMergedA = clusterAffiliation.get((int) dissimilarityMatrixMinValues[1][0]);
-            	List<Integer> clusterToBeMergedB = clusterAffiliation.get((int) dissimilarityMatrixMinValues[0][0]);
-            	List<Integer> mergedCluster = new ArrayList<Integer>();
-            	mergedCluster.addAll(clusterToBeMergedA);
-            	mergedCluster.addAll(clusterToBeMergedB);
+        			// Merge clusters
+        			List<Integer> clusterToBeMergedA = clusterAffiliation.get((int) dissimilarityMatrixMinValues[1][0]);
+        			List<Integer> clusterToBeMergedB = clusterAffiliation.get((int) dissimilarityMatrixMinValues[0][0]);
+        			List<Integer> mergedCluster = new ArrayList<Integer>();
+        			mergedCluster.addAll(clusterToBeMergedA);
+        			mergedCluster.addAll(clusterToBeMergedB);
             	
-            	try {
-            		dendo.setNewMerge(clusterToBeMergedA, clusterToBeMergedB, mergedCluster);
-            	} catch (Exception e) {
-        			AmuseLogger.write("WardAdapter - dissMatrix", Level.WARN, "The dendogram coudn't set a new merge: " + e.getMessage());
-        		}
+        			try {
+        				dendo.setNewMerge(clusterToBeMergedA, clusterToBeMergedB, mergedCluster);
+        			} catch (Exception e) {
+        				AmuseLogger.write("WardAdapter - dissMatrix", Level.WARN, "The dendogram coudn't set a new merge: " + e.getMessage());
+        			}
             	
-            	clusterAffiliation.add(mergedCluster);
-            	clusterAffiliation.remove(clusterToBeMergedA);
-            	clusterAffiliation.remove(clusterToBeMergedB);
+        			clusterAffiliation.add(mergedCluster);
+        			clusterAffiliation.remove(clusterToBeMergedA);
+        			clusterAffiliation.remove(clusterToBeMergedB);
             	
             	//-----------------------------------------------------------------------------------------------------------------------------
             	// (4) Für das ähnlichste Clusterpaar:
@@ -262,105 +219,97 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
             	//		- Soll noch ein drittes zum Cluster hinzugefügt werden oder lieber ein neues Paar erstellt?
             	//-----------------------------------------------------------------------------------------------------------------------------
             	
-            	// If the desired cluster number hasn't been reached yet
-            	if (mergeUntilThisClusterNumber < clusterAffiliation.size()) {
+        			// If the desired cluster number hasn't been reached yet
+        			if (mergeUntilThisClusterNumber < clusterAffiliation.size()) {
             		
-            		/** The dissimilarityMatrixTwo stores the ESS values for the centroid of cluster m united with cluster n */
-            		// The last cluster will not be evaluated since it it the same as the just merged cluster
-                	double[] dissimilarityBetweenMergedClusterAndTheOthers = new double[clusterAffiliation.size() -1];
-                	double[] centroidMergedCluster = this.calculateCentroid(allValues, mergedCluster);
+        				/** The dissimilarityMatrixTwo stores the ESS values for the centroid of cluster m united with cluster n */
+        				// The last cluster will not be evaluated since it it the same as the just merged cluster
+        				double[] dissimilarityBetweenMergedClusterAndTheOthers = new double[clusterAffiliation.size() -1];
+        				double[] centroidMergedCluster = this.calculateCentroid(mergedCluster);
                 		
                 	
-                	for (int m=0; m < dissimilarityBetweenMergedClusterAndTheOthers.length; m++) {
+        				for (int m=0; m < dissimilarityBetweenMergedClusterAndTheOthers.length; m++) {
                 			
-                		//AmuseLogger.write("WardAdapter", Level.DEBUG, "Filling the dissimilarity array at position " +m
-                		//		+ " of " + (dissimilarityBetweenMergedClusterAndTheOthers.length));
+        					//AmuseLogger.write("WardAdapter", Level.DEBUG, "Filling the dissimilarity array at position " +m
+        					//		+ " of " + (dissimilarityBetweenMergedClusterAndTheOthers.length));
                 		
-                		double dissimilarity = 0.0;
-                		double[] centroidM = this.calculateCentroid(allValues, clusterAffiliation.get(m));
+        					double dissimilarity = 0.0;
+        					double[] centroidM = this.calculateCentroid(clusterAffiliation.get(m));
                 				
-                    	if (numericalMeasure.equals("LWDissimilarityUpdateFormula")) {
-                    				
-                    				// TODO
-                    				//dissimilarity = this.calculateLWDissimilarity(
-                        			//		centroidN, clusterAffiliation.get(n).size(), 
-                        			//		centroidM, clusterAffiliation.get(m).size(), 
-                        			//		centroidC, sizeC)
-                        			
-                    	} else if (numericalMeasure.equals("Classic")) {
-                    				
-                    		dissimilarity = this.calculateClassicDissimilarity(
-                    			centroidMergedCluster, mergedCluster.size(), 
-                        		centroidM, clusterAffiliation.get(m).size());
-                    				
-                    	} else {
-                    		throw new NodeException("Error classifying data with the WardAdapter: The numerical measure couldn't be identified");
-                    	}
+        					dissimilarity = this.calculateClassicDissimilarity(
+        							centroidMergedCluster, mergedCluster.size(), 
+        							centroidM, clusterAffiliation.get(m).size());
                     	
-                    	if (dissimilarity == 0.0) {
-            				AmuseLogger.write("WardAdapter - dissArray", Level.WARN, "The dissimilarity wasn't calculated correctly!");
-            			}
-                    	dissimilarityBetweenMergedClusterAndTheOthers[m] = dissimilarity;
-                	}
+        					if (dissimilarity == 0.0) {
+        						AmuseLogger.write("WardAdapter - dissArray", Level.WARN, "The dissimilarity wasn't calculated correctly!");
+        					}
+        					dissimilarityBetweenMergedClusterAndTheOthers[m] = dissimilarity;
+        				}
                 	
                 	
-                	// Get the next minimum and the corresponding m and n values of the new dissimilarityBetweenMergedClusterAndTheOthers
-                	int minClusterNumber = 0;
-                	double minDisValue = dissimilarityBetweenMergedClusterAndTheOthers[0];
-                	for (int m=1; m < dissimilarityBetweenMergedClusterAndTheOthers.length; m++) {
-                		if (minDisValue > dissimilarityBetweenMergedClusterAndTheOthers[m]) {
-                			minClusterNumber = m;
-                			minDisValue = dissimilarityBetweenMergedClusterAndTheOthers[m];
-                		}
-                	}
+        				// Get the next minimum and the corresponding m and n values of the new dissimilarityBetweenMergedClusterAndTheOthers
+        				int minClusterNumber = 0;
+        				double minDisValue = dissimilarityBetweenMergedClusterAndTheOthers[0];
+        				for (int m=1; m < dissimilarityBetweenMergedClusterAndTheOthers.length; m++) {
+        					if (minDisValue > dissimilarityBetweenMergedClusterAndTheOthers[m]) {
+        						minClusterNumber = m;
+                				minDisValue = dissimilarityBetweenMergedClusterAndTheOthers[m];
+        					}
+        				}
                 	
-                	// Is the next best merge is with the justMerged cluster, merge again!
-                	// If not, then continue to the next iteration
-                	if (minDisValue < dissimilarityMatrixMinValues[2][1]) {
+        				// Is the next best merge is with the justMerged cluster, merge again!
+        				// If not, then continue to the next iteration
+        				if (minDisValue < dissimilarityMatrixMinValues[2][1]) {
                 		
-                		List<Integer> clusterToBeMergedC = clusterAffiliation.get(minClusterNumber);
-                		List<Integer> BigMergedCluster = new ArrayList<Integer>();
-                		BigMergedCluster.addAll(mergedCluster);
-                		BigMergedCluster.addAll(clusterToBeMergedC);
+        					List<Integer> clusterToBeMergedC = clusterAffiliation.get(minClusterNumber);
+        					List<Integer> BigMergedCluster = new ArrayList<Integer>();
+        					BigMergedCluster.addAll(mergedCluster);
+        					BigMergedCluster.addAll(clusterToBeMergedC);
                 		
-                		try {
-                			dendo.setNewMerge(mergedCluster, clusterToBeMergedC, BigMergedCluster);
-                    	} catch (Exception e) {
-                			AmuseLogger.write("WardAdapter", Level.WARN, "The dendogram coudn't set a new merge: " + e.getMessage());
-                		}
+        					try {
+        						dendo.setNewMerge(mergedCluster, clusterToBeMergedC, BigMergedCluster);
+        					} catch (Exception e) {
+        						AmuseLogger.write("WardAdapter", Level.WARN, "The dendogram coudn't set a new merge: " + e.getMessage());
+        					}
                     	
-                		clusterAffiliation.add(BigMergedCluster);
-                    	clusterAffiliation.remove(mergedCluster);
-                    	clusterAffiliation.remove(clusterToBeMergedC);
-                		
-                	}
-            	}
+        					clusterAffiliation.add(BigMergedCluster);
+        					clusterAffiliation.remove(mergedCluster);
+        					clusterAffiliation.remove(clusterToBeMergedC);
+        				}
+        			}
             	
-            	// IF ONLY TWO CLUSTERS ARE LEFT AND WE WANT ONLY ONE BIG CLUSTER
-        		// JUST MERGE THEM NOW
-            	if (clusterAffiliation.size() == 2 &&
-            			(k == 0 || k == 1)) {
+        			// IF ONLY TWO CLUSTERS ARE LEFT AND WE WANT ONLY ONE BIG CLUSTER
+        			// JUST MERGE THEM NOW
+        			if (clusterAffiliation.size() == 2 && (k == 0 || k == 1)) {
             		
-            		List<Integer> firstCluster = clusterAffiliation.get(0);
-            		List<Integer> secondCluster = clusterAffiliation.get(1);
-            		List<Integer> lastCluster = new ArrayList<Integer>();
-            		lastCluster.addAll(firstCluster);
-            		lastCluster.addAll(secondCluster);
+        				List<Integer> firstCluster = clusterAffiliation.get(0);
+        				List<Integer> secondCluster = clusterAffiliation.get(1);
+        				List<Integer> lastCluster = new ArrayList<Integer>();
+        				lastCluster.addAll(firstCluster);
+        				lastCluster.addAll(secondCluster);
             		
-            		try {
-            			dendo.setNewMerge(firstCluster, secondCluster, lastCluster);
-                	} catch (Exception e) {
-            			AmuseLogger.write("WardAdapter", Level.WARN, "The dendogram coudn't set a new merge: " + e.getMessage());
-            		}
+        				try {
+        					dendo.setNewMerge(firstCluster, secondCluster, lastCluster);
+        				} catch (Exception e) {
+        					AmuseLogger.write("WardAdapter", Level.WARN, "The dendogram coudn't set a new merge: " + e.getMessage());
+        				}
                 	
-            		clusterAffiliation.add(lastCluster);
-                	clusterAffiliation.remove(firstCluster);
-                	clusterAffiliation.remove(secondCluster);
+        				clusterAffiliation.add(lastCluster);
+        				clusterAffiliation.remove(firstCluster);
+        				clusterAffiliation.remove(secondCluster);
             		
-            	} else if (clusterAffiliation.size() < 1) {
-            		throw new NodeException("WardAdapter - classify(): Somehow there aren't ANY clusters. What did you do?");
-            	}
-            }
+        			} else if (clusterAffiliation.size() < 1) {
+        				throw new NodeException("WardAdapter - classify(): Somehow there aren't ANY clusters. What did you do?");
+        			}
+        		}
+        	}
+        	else if (numericalMeasure.equals("LWDissimilarityUpdateFormula")) {
+        		
+        		/** The dissimilarityMatrix stores the ESS values for the centroid of cluster m united with cluster n */
+    			double[][] dissimilarityMatrix = calculateDissimilarityMatrix();
+        	
+    			this.updateDissimilarityMatrix(dissimilarityMatrix);
+        	}
             
     		
     		//-----------------------------------------------------------------------------------------------------------------------------
@@ -418,6 +367,145 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
 	//---------------------------------------------------------------------------------------------------------------------------------
 	// Private help methods to calculate things so that the main method classify() stays nice
 	//---------------------------------------------------------------------------------------------------------------------------------
+	
+	private double[][] calculateDissimilarityMatrix () {
+		
+		/** The dissimilarityMatrix stores the ESS values for the centroid of cluster m united with cluster n */
+    	double[][] dissimilarityMatrix = new double[clusterAffiliation.size()][clusterAffiliation.size()];
+    		
+    	// m sind die Splaten und n die Zeilen
+    	for (int m=0; m < clusterAffiliation.size(); m++) {
+    		
+    		// Damit der centroid nicht jedes Mal neu berechnet werden muss geschieht dies einmal hier 
+    		double[] centroidM = this.calculateCentroid(clusterAffiliation.get(m));
+    		
+    		for (int n=0; n < clusterAffiliation.size(); n++) {
+    			
+    			// Falls es sich um dasselbe Cluster handelt, wird der Wert in der Matirx auf 0 gesetzt
+        		if (n == m) {
+        			dissimilarityMatrix[m][n] = 0.0;
+        		} 
+        		// Falls die MatrixDiagonale überschritten wird doppeln sich die Werte und werden aus Effizenzgründen nicht erneut berechnet
+        		else if (n < m) {
+        			dissimilarityMatrix[m][n] = dissimilarityMatrix[n][m];
+        		} else {
+        			
+        			//AmuseLogger.write("WardAdapter", Level.DEBUG, "Statring to calculate the DISSIMILARITY for n=" +n+ " and m=" +m);
+        			
+        			double dissimilarity = 0.0;
+        			double[] centroidN = this.calculateCentroid(clusterAffiliation.get(n));
+    				
+        			dissimilarity = this.calculateClassicDissimilarity(
+            				centroidN, clusterAffiliation.get(n).size(), 
+            				centroidM, clusterAffiliation.get(m).size());
+        			
+        			
+        			if (dissimilarity == 0.0) {
+        				AmuseLogger.write("WardAdapter", Level.WARN, "The dissimilarity wasn't calculated correctly!");
+        			}
+        			dissimilarityMatrix[m][n] = dissimilarity;
+        		}
+        	}
+    	}
+    	
+    	return dissimilarityMatrix;
+	}
+	
+	
+	private void updateDissimilarityMatrix (double[][] dissimilarityMatrix) {
+		
+		if ((k > 0 && k == clusterAffiliation.size()) || (k == 0 && clusterAffiliation.size() == 1)) {
+			AmuseLogger.write("WardAdapter", Level.DEBUG, "The LWUF recursion finished!");
+		} else {
+			
+			// Get the minimum (in the first row) and the second minimum (in the second row) and the corresponding m and n values
+			// dissimilarityMatrixMinValues[1][0] = true minM, dissimilarityMatrixMinValues[0][0] = true minN, dissimilarityMatrixMinValues[2][0] = true minValue
+			double[][] dissimilarityMatrixMinValues = calculateMininimum (dissimilarityMatrix);
+			
+			// Calculate the centroids of the clusters to be merged
+			double[] centroidM = this.calculateCentroid(clusterAffiliation.get((int) dissimilarityMatrixMinValues[1][0]));
+			int sizeM = clusterAffiliation.get((int) dissimilarityMatrixMinValues[1][0]).size();
+			double[] centroidN = this.calculateCentroid(clusterAffiliation.get((int) dissimilarityMatrixMinValues[0][0]));
+			int sizeN = clusterAffiliation.get((int) dissimilarityMatrixMinValues[0][0]).size();
+
+			int minIndex = 0;
+			int maxIndex = 0;
+			if (dissimilarityMatrixMinValues[1][0] < dissimilarityMatrixMinValues[0][0]) { // m<n
+				minIndex = (int) dissimilarityMatrixMinValues[1][0];
+				maxIndex = (int) dissimilarityMatrixMinValues[0][0];
+			} else {  //m>n
+				minIndex = (int) dissimilarityMatrixMinValues[0][0];
+				maxIndex = (int) dissimilarityMatrixMinValues[1][0];
+			}
+		
+			// Merge clusters
+			List<Integer> clusterToBeMergedA = clusterAffiliation.get((int) dissimilarityMatrixMinValues[1][0]);
+			List<Integer> clusterToBeMergedB = clusterAffiliation.get((int) dissimilarityMatrixMinValues[0][0]);
+			List<Integer> mergedCluster = new ArrayList<Integer>();
+			mergedCluster.addAll(clusterToBeMergedA);
+			mergedCluster.addAll(clusterToBeMergedB);
+		
+			try {
+				dendo.setNewMerge(clusterToBeMergedA, clusterToBeMergedB, mergedCluster);
+			} catch (Exception e) {
+				AmuseLogger.write("WardAdapter - dissMatrix", Level.WARN, "The dendogram coudn't set a new merge: " + e.getMessage());
+			}
+		
+			clusterAffiliation.remove(clusterToBeMergedA);
+			clusterAffiliation.remove(clusterToBeMergedB);
+			clusterAffiliation.add(minIndex, mergedCluster); //Das Cluster wird an dem minIndex eingefügt
+			
+			// UPDATE THE MATRIX
+			double[][] updatedMatrix = new double[clusterAffiliation.size()][clusterAffiliation.size()];
+			
+			// m sind die Splaten und n die Zeilen
+	    	for (int m=0; m < clusterAffiliation.size(); m++) {
+	    		for (int n=0; n < clusterAffiliation.size(); n++) {
+	    			
+	    			// Falls es sich um dasselbe Cluster handelt, wird der Wert in der Matirx auf 0 gesetzt
+	        		if (n == m) {
+	        			updatedMatrix[m][n] = 0.0;
+	        		} 
+	        		// Falls die MatrixDiagonale überschritten wird doppeln sich die Werte und werden aus Effizenzgründen nicht erneut berechnet
+	        		else if (n < m) {
+	        			updatedMatrix[m][n] = updatedMatrix[n][m];
+	        		} else {
+	        			
+	        			// Ist eins der betrachteten Cluster das gemergede? Dann Updaten!
+	        			if (m == minIndex || n == minIndex) {
+	        				double[] centroidK;
+	        				int sizeK;
+	        				if (m == minIndex) {
+	        					centroidK = this.calculateCentroid(clusterAffiliation.get(m));
+	        					sizeK = clusterAffiliation.get(m).size();
+	        				} else { 
+	        					centroidK = this.calculateCentroid(clusterAffiliation.get(n));
+	        					sizeK = clusterAffiliation.get(n).size();
+	        				}
+	        				
+	        				updatedMatrix[m][n] = this.calculateLWDissimilarity(centroidM, sizeM, centroidN, sizeN, centroidK, sizeK);
+	        			} 
+	        			// Ansonsten den Wert aus der ursprünglichen matirx übernehmen!
+	        			else {
+	        				// Falls m/n größer als der maxIndex ist, dann muss wegen des Wegfallens dieses Clusters in der UpdateMatrix +1 in der Originalen beachtet werden
+	        				if (m < maxIndex && n < maxIndex) {
+	        					updatedMatrix[m][n] = dissimilarityMatrix[m][n];
+	        				} else {
+	        					int updateM = m;
+	        					if (m >= maxIndex) { updateM = m+1; }
+	        					int updateN = n;
+	        					if (n >= maxIndex) { updateN = n+1; }
+	        					
+	        					updatedMatrix[m][n] = dissimilarityMatrix[updateM][updateN];
+	        				}
+	        			}
+	        			
+	        		}
+	    		}
+			}
+	    	this.updateDissimilarityMatrix(updatedMatrix);
+		}
+	}
 	
 	/** Calculates the minimum value and its corresponding indices of a given double matrix */
 	private double[][] calculateMininimum (double[][] matrix) {
@@ -489,8 +577,8 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
 	private double calculateClassicDissimilarity (double[] centroidA, double sizeA, double[] centroidB, double sizeB) {
 		
 		double cardinality = (sizeA * sizeB) / (sizeA + sizeB);
-		double distanceMeasure = this.squaredEuclideanDistance(centroidA, centroidB);
-		double result = cardinality * distanceMeasure;
+		double distance = this.squaredEuclideanDistance(centroidA, centroidB);
+		double result = cardinality * distance;
 		return result;
 		
 	}
@@ -530,25 +618,24 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
 	 */
 	private double squaredEuclideanDistance (double[] centroidA, double[] centroidB) {
 		
-		double distanceMeasure = 0.0;
+		double distance = 0.0;
 		
 		// Using the squared euclidean distance as distance measure
 		for(int x=0; x < centroidA.length; x ++) {
 			double difference = centroidA[x] - centroidB[x];
-			distanceMeasure += difference * difference;
+			distance += difference * difference;
 		}
 		
-		return distanceMeasure;		
+		return distance;		
 	}
 		
 	
 	/** 
 	 * Calculates the centroid for one Cluster
-	 * @param allValues = Matrix which contains for each song and every feature the corresponding value
 	 * @param cluster = The cluster (List<Integer>) which centroid should be calculated
 	 * @return An array of doubles which contains for every feature (index) the value of the centroid 
 	 */
-	private double[] calculateCentroid (double[][] allValues, List<Integer> cluster) {
+	private double[] calculateCentroid (List<Integer> cluster) {
 		
 		double[] centroid = new double[allValues[0].length];
 		
