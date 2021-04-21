@@ -174,7 +174,7 @@ public class FastKMeansAdapter extends AmuseTask implements ClassifierUnsupervis
         		if (maxClusterValue == 0) {
         			AmuseLogger.write("FastKMeansAdapter", Level.ERROR , "There is only 1 giant Cluster and everything is in it!");
         		}
-        		AmuseLogger.write("FastKMeansAdapter", Level.DEBUG, "There are " + maxClusterValue + "+1 different clusters.");
+        		AmuseLogger.write("FastKMeansAdapter", Level.DEBUG, "There are " + (maxClusterValue+1) + " different clusters.");
         		
         		// Create new Cluster Attributes
         		for (int c=0; c<maxClusterValue+1; c++) {
@@ -191,6 +191,8 @@ public class FastKMeansAdapter extends AmuseTask implements ClassifierUnsupervis
         			amuseDataSet.addAttribute(clusterX);
         		}
         		AmuseLogger.write("FastKMeansAdapter", Level.DEBUG, "FastKMeansAdapter successfully edited the result to AMUSE standad");
+        		
+        		Testing.printMinMax(amuseDataSet);
             
             // Save to .arff file
             String outputPath = AmusePreferences.get(KeysStringValue.AMUSE_PATH) + File.separator + "experiments" + File.separator + "FastKMeansAdapter_Result.arff";

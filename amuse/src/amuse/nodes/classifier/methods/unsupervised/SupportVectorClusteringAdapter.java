@@ -24,6 +24,7 @@ import amuse.interfaces.nodes.NodeException;
 import amuse.interfaces.nodes.methods.AmuseTask;
 import amuse.nodes.classifier.ClassificationConfiguration;
 import amuse.nodes.classifier.interfaces.ClassifierUnsupervisedInterface;
+import amuse.nodes.classifier.methods.unsupervised.supportclasses.Testing;
 import amuse.preferences.AmusePreferences;
 import amuse.preferences.KeysStringValue;
 import amuse.util.AmuseLogger;
@@ -208,7 +209,7 @@ public class SupportVectorClusteringAdapter extends AmuseTask implements Classif
         		if (maxClusterValue == 0) {
         			AmuseLogger.write("SVC", Level.ERROR , "There is only 1 giant Cluster and everything is in it!");
         		}
-        		AmuseLogger.write("SVC", Level.DEBUG, "There are " + maxClusterValue + "+1 different clusters.");
+        		AmuseLogger.write("SVC", Level.DEBUG, "There are " + (maxClusterValue+1) + " different clusters.");
         		
         		// Create new Cluster Attributes
         		for (int c=0; c<maxClusterValue+1; c++) {
@@ -239,6 +240,8 @@ public class SupportVectorClusteringAdapter extends AmuseTask implements Classif
     			amuseDataSet.addAttribute(noise);
     			
         		AmuseLogger.write("SVC", Level.DEBUG, "SVC successfully edited the result to AMUSE standad");
+        		
+        		Testing.printMinMax(amuseDataSet);
     		
     		// Give the amuseDataSet to the ClassificationConfiguration so it may be put together and saved there
             ((ClassificationConfiguration)(this.correspondingScheduler.getConfiguration())).setInputToClassify(new DataSetInput(amuseDataSet));

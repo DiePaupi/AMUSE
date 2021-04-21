@@ -24,6 +24,7 @@ import amuse.interfaces.nodes.NodeException;
 import amuse.interfaces.nodes.methods.AmuseTask;
 import amuse.nodes.classifier.ClassificationConfiguration;
 import amuse.nodes.classifier.interfaces.ClassifierUnsupervisedInterface;
+import amuse.nodes.classifier.methods.unsupervised.supportclasses.Testing;
 import amuse.preferences.AmusePreferences;
 import amuse.preferences.KeysStringValue;
 import amuse.util.AmuseLogger;
@@ -148,7 +149,7 @@ public class DBScanAdapter extends AmuseTask implements ClassifierUnsupervisedIn
         		if (maxClusterValue == 0) {
         			AmuseLogger.write("DBScanAdapter", Level.ERROR , "There is only 1 giant Cluster and everything is in it!");
         		}
-        		AmuseLogger.write("DBScanAdapter", Level.DEBUG, "There are " + maxClusterValue + "+1 different clusters.");
+        		AmuseLogger.write("DBScanAdapter", Level.DEBUG, "There are " + (maxClusterValue+1) + " different clusters.");
         		
         		// Create new Cluster Attributes
         		for (int c=0; c<maxClusterValue+1; c++) {
@@ -165,6 +166,8 @@ public class DBScanAdapter extends AmuseTask implements ClassifierUnsupervisedIn
         			amuseDataSet.addAttribute(clusterX);
         		}
         		AmuseLogger.write("DBScanAdapter", Level.DEBUG, "DBScanAdapter successfully edited the result to AMUSE standad");
+        		
+        		Testing.printMinMax(amuseDataSet);
     		
     		// Give the amuseDataSet to the ClassificationConfiguration so it may be put together and saved there
             ((ClassificationConfiguration)(this.correspondingScheduler.getConfiguration())).setInputToClassify(new DataSetInput(amuseDataSet));

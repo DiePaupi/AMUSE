@@ -325,6 +325,8 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
     			amuseDataSet.addAttribute(clusterX);
     		}
     		
+    		Testing.printMinMax(amuseDataSet);
+    		
     		// Give the amuseDataSet to the ClassificationConfiguration so it may be put together and saved there
         	// The ClassifierNodeScheduler proceedTask(...) returns or saves an ArrayList<ClassifiedSongPartitionsDescription>
     		((ClassificationConfiguration)(this.correspondingScheduler.getConfiguration())).setPartitionsAlreadySummerized(true);
