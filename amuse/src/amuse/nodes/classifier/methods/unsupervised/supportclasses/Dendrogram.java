@@ -382,7 +382,7 @@ public class Dendrogram {
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	/** Print the dendogram as Tikz Forest in LaTeX */
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	public void printTikzDendogram (String path) throws NodeException {
+	public void printTikzDendrogram (String path) throws NodeException {
 		
 		File dendogramFile = new File(path + "Ward_DENDOGRAM.tex");
 		BufferedWriter fileWriter;
@@ -428,7 +428,7 @@ public class Dendrogram {
 			
 			fileWriter.close();
 		} catch (IOException e) {
-			AmuseLogger.write("DENDOGRAM", Level.WARN, "Couldn't initialize the file writer.");
+			AmuseLogger.write("Dendrogram", Level.WARN, "Couldn't initialize the file writer.");
 		}
 	}
 	

@@ -5,3 +5,6 @@
 @ATTRIBUTE 'CategoryName' STRING
 
 @DATA
+1,'/home/speckman/Dokumente/AMUSEHOME/Annotations/Multiple_Tracks/Sabaton_Disturbed_Samer_TEST.arff','Sabaton_Disturbed_Samer_TEST'
+
+2,'/home/speckman/Dokumente/AMUSEHOME/Annotations/Multiple_Tracks/Sabaton_Disturbed_Samer_Classification.arff','Sabaton_Disturbed_Samer_Classification'

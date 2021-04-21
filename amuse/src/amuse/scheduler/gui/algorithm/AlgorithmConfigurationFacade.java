@@ -234,6 +234,10 @@ public class AlgorithmConfigurationFacade implements ModelTypeListener {
 	public JComponent getAlgorithmSelectionComboBox() {
 		return pnlComboBox;
 	}
+	
+	public JComboBox getAlgorithmComboBox() {
+		return comboBox;
+	}
 
 	/**
 	 * This methods loads an Algorithm Table from arff file.

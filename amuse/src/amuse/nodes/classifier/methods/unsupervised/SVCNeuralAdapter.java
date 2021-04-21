@@ -163,13 +163,18 @@ public class SVCNeuralAdapter extends AmuseTask implements ClassifierUnsupervise
     			int maxClusterValue = 0;
         		for (int i=0; i<valueAmount; i++) {
         			String currentRawCluster = (String) clusterResultAtt.getValueAt(i);
-        				// value should be something like "cluster_1" so delete the first 8 chars
-        			currentRawCluster = currentRawCluster.substring(8);
         			
-        			int currClusterInt = Integer.parseInt(currentRawCluster);
-        			clusterResultArray[i] = currClusterInt;
-        			if (maxClusterValue < currClusterInt) {
-        				maxClusterValue = currClusterInt;
+        			// value should be something like "cluster_1" so delete the first 8 chars OR "noise"
+        			if (currentRawCluster.contentEquals("noise")) {
+        				clusterResultArray[i] = -1;
+        			} else {
+        				currentRawCluster = currentRawCluster.substring(8);
+            			
+            			int currClusterInt = Integer.parseInt(currentRawCluster);
+            			clusterResultArray[i] = currClusterInt;
+            			if (maxClusterValue < currClusterInt) {
+            				maxClusterValue = currClusterInt;
+            			}
         			}
         		}
         		if (maxClusterValue == 0) {
@@ -191,9 +196,24 @@ public class SVCNeuralAdapter extends AmuseTask implements ClassifierUnsupervise
         			Attribute clusterX = new NumericAttribute("cluster_" + c, clusterXvalueList);
         			amuseDataSet.addAttribute(clusterX);
         		}
+        		
+        		// Create an attribute for possible noise
+        		ArrayList<Double> noisevalueList = new ArrayList<Double>();
+    			for (int i=0; i < clusterResultArray.length; i++) {
+    				int currClusterInt = clusterResultArray[i];
+    				if (currClusterInt == -1) {
+    					noisevalueList.add(i, 1.0);
+    				} else {
+    					noisevalueList.add(i, 0.0);
+    				}
+    			}
+    			Attribute noise = new NumericAttribute("noise", noisevalueList);
+    			amuseDataSet.addAttribute(noise);
+    			
         		AmuseLogger.write("SVC", Level.DEBUG, "SVC successfully edited the result to AMUSE standad");
     		
     		// Give the amuseDataSet to the ClassificationConfiguration so it may be put together and saved there
+        	((ClassificationConfiguration)(this.correspondingScheduler.getConfiguration())).setNoise(true);
             ((ClassificationConfiguration)(this.correspondingScheduler.getConfiguration())).setInputToClassify(new DataSetInput(amuseDataSet));
             
             // Save to .arff file

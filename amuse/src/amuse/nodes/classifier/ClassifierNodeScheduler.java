@@ -1214,6 +1214,7 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 					
 				}
 				
+				// In case of music segmentation
 				if (classifierResult.size() == 1) {
 					List<String> songNames = new ArrayList<String>();
 					List<double[]> clusterAffiliations = new ArrayList<double[]>();
@@ -1244,7 +1245,9 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 		
 			int clusterNumber = 0;
 			for(int i = 0; i < input.getAttributeCount(); i++) {
-				if (input.getAttribute(i).getName().substring(0,7).equals("cluster")) {
+				if (input.getAttribute(i).getName().contentEquals("noise")) {
+					clusterNumber++;
+				} else if (input.getAttribute(i).getName().substring(0,7).equals("cluster")) {
 					clusterNumber++;
 				}
 			}
@@ -1256,7 +1259,7 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 				AmuseLogger.write(ClassifierNodeScheduler.class.getName(), Level.WARN, "There is only one giant cluster!");
 				numberOfCategories = clusterNumber;
 			} else {
-				AmuseLogger.write(ClassifierNodeScheduler.class.getName(), Level.DEBUG, "There were "+ clusterNumber +" Clusters detected.");
+				AmuseLogger.write(ClassifierNodeScheduler.class.getName(), Level.DEBUG, "There were "+ clusterNumber +" clusters detected.");
 				numberOfCategories = clusterNumber;
 			}
 	}
@@ -1268,8 +1271,8 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 		File visualOutput = new File(path);
 		try {
 			BufferedWriter fileWriter;
-			String sep = System.getProperty("line.separator");
 			fileWriter = new BufferedWriter(new FileWriter(visualOutput));
+			String sep = System.getProperty("line.separator");
 			
 			String fileHead = "\\documentclass[12pt,border=10pt]{standalone} " + sep 
 					+ "\\usepackage{booktabs} " + sep
@@ -1283,8 +1286,13 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 				clusterNames += "\\multicolumn{1}{c}{\\textbf{Cluster " + c + "}} & ";
 			}
 			tabularStart += "c} " + sep + "   \\toprule " + sep;
-			clusterNames += "      \\multicolumn{1}{c}{\\textbf{Cluster " + (numberOfCategories-1) + "}} \\" + "\\ " + sep 
-							+ "   \\midrule " + sep;
+			
+			if (((ClassificationConfiguration)taskConfiguration).getNoise()) {
+				clusterNames += "      \\multicolumn{1}{c}{\\textbf{Noise}} \\" + "\\ " + sep + "   \\midrule " + sep;
+			} else {
+				clusterNames += "      \\multicolumn{1}{c}{\\textbf{Cluster " + (numberOfCategories-1) + "}} \\" + "\\ " + sep + "   \\midrule " + sep;
+			}
+			
 			fileWriter.append( tabularStart );
 			fileWriter.append( "      " + clusterNames );
 		
@@ -1318,7 +1326,7 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 							// Ignore the last 4 chars as they are something like ".mp3" or ".wav"
 							for (int positionInString = name.length -5; positionInString >= 0; positionInString--) {
 								// If we have reached the end of the song name there'll be a /
-								if (name[positionInString] == '/') {
+								if (name[positionInString] == '/' || name[positionInString] == '\\') {
 									break;
 								} else if (name[positionInString] == '_') {
 									nameOfThisSong = "-" + nameOfThisSong;
@@ -1328,7 +1336,7 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 							}
 						}
 						
-						if (clusterCertanty > 0.99) {
+						if (clusterCertanty > 0.98) {
 							thisClustersMembers.add(nameOfThisSong + "$^{\\ast}$");
 						} else {
 							thisClustersMembers.add(nameOfThisSong);
@@ -1345,7 +1353,7 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 					maxMemberCount = allClustersAndTheirMembers.get(clusters).size();
 				}
 			}
-		AmuseLogger.write("ClassifierNodeScheduler - createVisual(...)", Level.DEBUG, "There are max" + maxMemberCount + " members in a cluster.");
+		AmuseLogger.write("ClassifierNodeScheduler - createVisual(...)", Level.DEBUG, "There are max " + maxMemberCount + " members in a cluster.");
 		
 			// Fill other clusters up
 			for (int clusters=0; clusters < allClustersAndTheirMembers.size();  clusters++) {
@@ -1390,7 +1398,7 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 	}
 	
 	
-	protected void setNumberOfCategories(int numberOfCategories) {
+	public void setNumberOfCategories(int numberOfCategories) {
 		this.numberOfCategories = numberOfCategories;
 	}
 

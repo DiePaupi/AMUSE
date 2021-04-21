@@ -187,15 +187,23 @@ public class SupportVectorClusteringAdapter extends AmuseTask implements Classif
     			
     			int maxClusterValue = 0;
         		for (int i=0; i<valueAmount; i++) {
-        			String currentRawCluster = (String) clusterResultAtt.getValueAt(i);
-        				// value should be something like "cluster_1" so delete the first 8 chars
-        			currentRawCluster = currentRawCluster.substring(8);
         			
-        			int currClusterInt = Integer.parseInt(currentRawCluster);
-        			clusterResultArray[i] = currClusterInt;
-        			if (maxClusterValue < currClusterInt) {
-        				maxClusterValue = currClusterInt;
+        			String currentRawCluster = (String) clusterResultAtt.getValueAt(i);
+        			
+        			// value should be something like "cluster_1" so delete the first 8 chars OR "noise"
+        			if (currentRawCluster.contentEquals("noise")) {
+        				clusterResultArray[i] = -1;
+        				((ClassificationConfiguration)(this.correspondingScheduler.getConfiguration())).setNoise(true);
+        			} else {
+        				currentRawCluster = currentRawCluster.substring(8);
+            			
+            			int currClusterInt = Integer.parseInt(currentRawCluster);
+            			clusterResultArray[i] = currClusterInt;
+            			if (maxClusterValue < currClusterInt) {
+            				maxClusterValue = currClusterInt;
+            			}
         			}
+        			
         		}
         		if (maxClusterValue == 0) {
         			AmuseLogger.write("SVC", Level.ERROR , "There is only 1 giant Cluster and everything is in it!");
@@ -216,6 +224,20 @@ public class SupportVectorClusteringAdapter extends AmuseTask implements Classif
         			Attribute clusterX = new NumericAttribute("cluster_" + c, clusterXvalueList);
         			amuseDataSet.addAttribute(clusterX);
         		}
+        		
+        		// Create an attribute for possible noise
+        		ArrayList<Double> noisevalueList = new ArrayList<Double>();
+    			for (int i=0; i < clusterResultArray.length; i++) {
+    				int currClusterInt = clusterResultArray[i];
+    				if (currClusterInt == -1) {
+    					noisevalueList.add(i, 1.0);
+    				} else {
+    					noisevalueList.add(i, 0.0);
+    				}
+    			}
+    			Attribute noise = new NumericAttribute("noise", noisevalueList);
+    			amuseDataSet.addAttribute(noise);
+    			
         		AmuseLogger.write("SVC", Level.DEBUG, "SVC successfully edited the result to AMUSE standad");
     		
     		// Give the amuseDataSet to the ClassificationConfiguration so it may be put together and saved there

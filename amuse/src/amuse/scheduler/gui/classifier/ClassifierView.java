@@ -136,6 +136,10 @@ public class ClassifierView extends JPanel implements HasCaption, NextButtonUsab
         
         modelTypePanel.addModelTypeListener(trainingAlgorithmFacade);
         addRightSide(trainingAlgorithmFacade.getAlgorithmSelectionComboBox());
+        // Grey out the Calculate Avarage box if algorithmim is ward
+        //trainingAlgorithmFacade.getAlgorithmComboBox().addActionListener(e ->{
+        //	setChildsEnabled(selectAverageCalculation, !trainingAlgorithmFacade.getSelectedAlgorithm().getName().equals("Wards Agglomeration"));
+        //});
         addRightSide(trainingAlgorithmFacade.getParameterPanel());
 
         targetPathSelectionPanel.add(selectAverageCalculation, "growx, wrap");

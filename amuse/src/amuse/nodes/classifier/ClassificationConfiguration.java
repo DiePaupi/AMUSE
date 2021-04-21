@@ -131,6 +131,9 @@ public class ClassificationConfiguration extends TaskConfiguration {
 	/** Sets if the adapter class has already summarized the partitions - Default is false, everything else must be specifically set */
 	private boolean partitionsAlreadySummerized = false;
 	
+	/** Indicates if the last cluster by unsupervised leaning methods is noise */
+	private boolean hasNoise = false;
+	
 
 	/**
 	 * STANDARD supervised CONSTRUCTOR
@@ -975,5 +978,13 @@ public class ClassificationConfiguration extends TaskConfiguration {
 	
 	public boolean getPartitionsAlreadySummerized () {
 		return this.partitionsAlreadySummerized;
+	}
+	
+	public void setNoise (boolean hasNoise) {
+		this.hasNoise = hasNoise;
+	}
+	
+	public boolean getNoise () {
+		return this.hasNoise;
 	}
 }

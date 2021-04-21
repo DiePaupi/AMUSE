@@ -225,7 +225,7 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
         					double dissimilarity = 0.0;
         					double[] centroidM = this.calculateCentroid(clusterAffiliation.get(m));
                 				
-        					dissimilarity = this.calculateClassicDissimilarity(
+        					dissimilarity = this.calculateWardsCriterion(
         							centroidMergedCluster, mergedCluster.size(), 
         							centroidM, clusterAffiliation.get(m).size());
                     	
@@ -334,7 +334,7 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
     		// Show the Dendogram in the AMUSE logger
     		dendo.showClusters();
     		// Save Dendogram print as .tex
-    		dendo.printTikzDendogram(outputPath);
+    		dendo.printTikzDendrogram(outputPath);
         } catch(Exception e) {
 			throw new NodeException("Error classifying data with the WardAdapter: " + e.getMessage());
 		}
@@ -372,7 +372,7 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
         			double dissimilarity = 0.0;
         			double[] centroidN = this.calculateCentroid(clusterAffiliation.get(n));
     				
-        			dissimilarity = this.calculateClassicDissimilarity(
+        			dissimilarity = this.calculateWardsCriterion(
             				centroidN, clusterAffiliation.get(n).size(), 
             				centroidM, clusterAffiliation.get(m).size());
         			
@@ -403,9 +403,9 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
 			AmuseLogger.write("WardAdapter", Level.WARN, "The dendogram coudn't set a new merge: " + e.getMessage());
 		}
 	
+		clusterAffiliation.add(mergedCluster);
 		clusterAffiliation.remove(clusterA);
 		clusterAffiliation.remove(clusterB);
-		clusterAffiliation.add(mergedCluster);
 		return mergedCluster;
 	}
 	
@@ -447,7 +447,7 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
 				minIndex = (int) dissimilarityMatrixMinValues[0][0];
 				maxIndex = (int) dissimilarityMatrixMinValues[1][0];
 			}
-			AmuseLogger.write("WardAdapter - LUWF", Level.DEBUG, "The current indizes are min = " + minIndex + " and max = " + maxIndex);
+			//AmuseLogger.write("WardAdapter - LUWF", Level.DEBUG, "The current indizes are min = " + minIndex + " and max = " + maxIndex);
 			//AmuseLogger.write("WardAdapter - LWUF", Level.DEBUG, "Amount of clusters before merge: " + clusterAffiliation.size());
 		
 			// Merge clusters
@@ -467,7 +467,7 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
 			clusterAffiliation.remove(clusterToBeMergedB);
 			// Das Cluster wird an dem minIndex eingefügt
 			clusterAffiliation.add(minIndex, mergedCluster); 
-			AmuseLogger.write("WardAdapter - LWUF", Level.DEBUG, "The clusters were merged and added to postiton " + minIndex);
+			//AmuseLogger.write("WardAdapter - LWUF", Level.DEBUG, "The clusters were merged and added to postiton " + minIndex);
 			//AmuseLogger.write("WardAdapter - LWUF", Level.DEBUG, "Amount of clusters after merge: " + clusterAffiliation.size());
 			
 			// UPDATE THE MATRIX
@@ -607,7 +607,7 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
 	 * 
 	 * @return A double containing the calculated dissimilarity with the classic Ward criterion
 	 */
-	private double calculateClassicDissimilarity (double[] centroidA, double sizeA, double[] centroidB, double sizeB) {
+	private double calculateWardsCriterion (double[] centroidA, double sizeA, double[] centroidB, double sizeB) {
 		
 		double cardinality = (sizeA * sizeB) / (sizeA + sizeB);
 		double distance = this.squaredEuclideanDistance(centroidA, centroidB);

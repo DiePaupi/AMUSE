@@ -61,7 +61,7 @@ public abstract class Attribute implements AttributeInterface, Serializable {
      * @param name The Name of this Attribute
      * @param dataSet The DataSet loaded from arff file.
      */
-    Attribute(String name, ArffDataSet dataSet) {
+    public Attribute(String name, ArffDataSet dataSet) {
         this.name = name;
         this.arffDataSet = dataSet;
     }
