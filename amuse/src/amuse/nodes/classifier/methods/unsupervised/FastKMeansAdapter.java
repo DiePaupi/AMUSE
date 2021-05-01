@@ -37,25 +37,29 @@ import amuse.util.LibraryInitializer;
  */
 public class FastKMeansAdapter extends AmuseTask implements ClassifierUnsupervisedInterface {
 
-	/** k determines the number of clusters and the others the upper bound for the optimization steps and runs */
+	/** k determines the number of clusters */
 	private int k;
+	/** Determines the upper bound for the optimization steps */
 	private int max_opt_steps;
+	/** Determines the upper bound for the number of runs */
 	private int max_runs;
 	
 	/** Determines the numerical distance measure to be used */
 	private String measureType;
 	
-	/** Should RapidMiner determine good start values? */
+	/** Indicates if RapidMiner should determine good start values */
 	private boolean determine_good_start_values;
-	/** Should a local random seed be used? */
+	/** Indicates if a local random seed should be used */
 	private boolean use_local_random_seed;
 	/** Value of the local random seed */
 	private int local_random_seed;
 	
 	
+	
 	@Override
+	/** Receives the parameters given by the user and sets them accordingly */
 	public void setParameters(String parameterString) throws NodeException {
-		// Should the default parameters be used? Or are values given?
+		// Should the default parameters be used or are values given?
         if(parameterString == "" || parameterString == null) {
             k = 5;
             max_opt_steps = 100;
@@ -75,13 +79,15 @@ public class FastKMeansAdapter extends AmuseTask implements ClassifierUnsupervis
             local_random_seed = new Integer(tok.nextToken());
         }
         
-      //Check if all paramters are in range
+        // Check if all parameters are in range
         if (k < 2 || max_runs < 1 || max_opt_steps < 1 || local_random_seed < 1) {
         	throw new NodeException("FastKMeans: One of the parameters was out of range!");
         }
 	}
 
+	
 	@Override
+	/** Initializes the RapidMiner library */
 	public void initialize() throws NodeException {
 		try {
             LibraryInitializer.initializeRapidMiner();
@@ -91,24 +97,20 @@ public class FastKMeansAdapter extends AmuseTask implements ClassifierUnsupervis
 	}
 
 	@Override
+	/** Creates a RapidMiner process, sets the parameters, connects the ports, runs the process and edits the RapidMiner results to a AMUSE compatible format */
 	public void classify() throws NodeException {
-		/* Gets the DataSet given by the user in the Classifier AMUSE task */
-        DataSet dataSetToClassify = ((DataSetInput)((ClassificationConfiguration)this.correspondingScheduler.
-         getConfiguration()).getInputToClassify()).getDataSet();
+		
+		/** DataSet of music (partitions) to be classified */
+        DataSet dataSetToClassify = ((DataSetInput)((ClassificationConfiguration)this.correspondingScheduler.getConfiguration()).getInputToClassify()).getDataSet();
 
         try {
-        	//String path = AmusePreferences.get(KeysStringValue.AMUSE_PATH) + File.separator + "experiments" + File.separator + "FastKMeansAdapter_DataSetToClassifyTEST.arff";
-            //CreateProcesedFeaturesTestSet.createTestFile(path);
-            //dataSetToClassify = new DataSet(new File(path));
-        	//dataSetToClassify.saveToArffFile(new File(path));
-            
-            /* Create the RapidMiner process */
+        	// Create the RapidMiner process
             Process process = new Process();
 
-                // Create the XMeans Operator in RM
+                // Create the RapidMiner FastKMeans operator
                 Operator clusterer = OperatorService.createOperator(FastKMeans.class);
 
-                // Set the parameters and add the clustering to the process
+                // Set the parameters
                 clusterer.setParameter("determine_good_start_values", String.valueOf(determine_good_start_values));
                 clusterer.setParameter("remove_unlabeled", "false");
                 clusterer.setParameter("k", new Integer(k).toString());
@@ -121,9 +123,10 @@ public class FastKMeansAdapter extends AmuseTask implements ClassifierUnsupervis
                 clusterer.setParameter(DistanceMeasures.PARAMETER_MEASURE_TYPES, DistanceMeasures.MEASURE_TYPES[DistanceMeasures.NUMERICAL_MEASURES_TYPE]);
                 clusterer.setParameter(DistanceMeasures.PARAMETER_NUMERICAL_MEASURE, measureType);
                 
+                // Add the clustering operator to the process
                 process.getRootOperator().getSubprocess(0).addOperator(clusterer);
 
-                // Connect the ports so RapidMiner knows whats up
+                // Connect the ports so RapidMiner knows what's up
                 InputPort clustererInputPort = clusterer.getInputPorts().getPortByName("example set");
                 	// Return the the "clustered set" and not the "cluster model"
                 OutputPort clustererOutputPort = clusterer.getOutputPorts().getPortByName("clustered set");
@@ -131,10 +134,10 @@ public class FastKMeansAdapter extends AmuseTask implements ClassifierUnsupervis
                 OutputPort processOutputPort = process.getRootOperator().getSubprocess(0).getInnerSources().getPortByIndex(0);
                 processOutputPort.connectTo(clustererInputPort);
                 clustererOutputPort.connectTo(processInputPort);
-                	//AmuseLogger.write("XMeansAdapter", Level.DEBUG, "Ports were connected");
 
-            // Run the RapidMiner-Process - XMeans needs an ExampleSet so it's being converted here
+            // The RapidMiner operator needs the input as an ExampleSet (so it's being converted here)
             ExampleSet exampleSet = dataSetToClassify.convertToRapidMinerExampleSet();
+            // Run the RapidMiner-Process 
             IOContainer result = process.run(new IOContainer(exampleSet));
             AmuseLogger.write("FastKMeansAdapter", Level.DEBUG, "RapidMiner FastKMeansAdapter finished successfully");
 
@@ -142,31 +145,32 @@ public class FastKMeansAdapter extends AmuseTask implements ClassifierUnsupervis
             exampleSet = result.get(ExampleSet.class);
          	DataSet resultDataSet = new DataSet(exampleSet);
          	
-         	// Edit the result so AMUSE can work with it again
+         	
+         	// Edit the result so AMUSE can work with it again -----------------------------------------------------------------------------------------------------
          	
          		// Copy the result DataSet but without the id attribute (that RapidMiner put there)
          		DataSet amuseDataSet = new DataSet("FastKMeansAdapterResultDataSet");
-    			for (int j=0; j<resultDataSet.getAttributeCount(); j++) {
-    				// If the attribute is NOT the id copy the attribute to the amuseDataSet
-    				if (!resultDataSet.getAttribute(j).getName().equals("id") && !resultDataSet.getAttribute(j).getName().equals("cluster")) {
-    					amuseDataSet.addAttribute(resultDataSet.getAttribute(j));
+    			for (int attributeNumber=0; attributeNumber<resultDataSet.getAttributeCount(); attributeNumber++) {
+    				// If the attribute is NOT the id or cluster indication: copy the attribute to the amuseDataSet
+    				if (!resultDataSet.getAttribute(attributeNumber).getName().equals("id") && !resultDataSet.getAttribute(attributeNumber).getName().equals("cluster")) {
+    					amuseDataSet.addAttribute(resultDataSet.getAttribute(attributeNumber));
     				}
     			}
     			
-    			// Get the cluster numbers from the resultDataSet and 
-    			// count how many different clusters there are (because that's how many new attributes are needed)
-    			int valueAmount = resultDataSet.getAttribute(0).getValueCount();
+    			// Get the cluster numbers from the resultDataSet and  count how many different clusters there are 
+    			// (because that's how many new attributes are needed)
     			Attribute clusterResultAtt = resultDataSet.getAttribute("cluster");
+    			int valueAmount = clusterResultAtt.getValueCount();
     			int[] clusterResultArray = new int[valueAmount];
     			
     			int maxClusterValue = 0;
-        		for (int i=0; i<valueAmount; i++) {
-        			String currentRawCluster = (String) clusterResultAtt.getValueAt(i);
-        				// value should be something like "cluster_1" so delete the first 8 chars
+        		for (int valueNumber=0; valueNumber<valueAmount; valueNumber++) {
+        			String currentRawCluster = (String) clusterResultAtt.getValueAt(valueNumber);
+        				// The value should be something like "cluster_1" so delete the first 8 chars to get the cluster number
         			currentRawCluster = currentRawCluster.substring(8);
-        			
         			int currClusterInt = Integer.parseInt(currentRawCluster);
-        			clusterResultArray[i] = currClusterInt;
+        			clusterResultArray[valueNumber] = currClusterInt;
+        			
         			if (maxClusterValue < currClusterInt) {
         				maxClusterValue = currClusterInt;
         			}
@@ -176,27 +180,28 @@ public class FastKMeansAdapter extends AmuseTask implements ClassifierUnsupervis
         		}
         		AmuseLogger.write("FastKMeansAdapter", Level.DEBUG, "There are " + (maxClusterValue+1) + " different clusters.");
         		
-        		// Create new Cluster Attributes
-        		for (int c=0; c<maxClusterValue+1; c++) {
+        		// Create new cluster attributes
+        		for (int clusterNumber=0; clusterNumber<maxClusterValue+1; clusterNumber++) {
         			ArrayList<Double> clusterXvalueList = new ArrayList<Double>();
-        			for (int i=0; i < clusterResultArray.length; i++) {
-        				int currClusterInt = clusterResultArray[i];
-        				if (currClusterInt == c) {
-        					clusterXvalueList.add(i, 1.0);
+        			// Go through the partitions and check their assigned cluster
+        			for (int partitionNumber=0; partitionNumber < clusterResultArray.length; partitionNumber++) {
+        				// If the current partitions assigned cluster number matches this newly created cluster, set the value to 1 (otherwise to 0)
+        				if (clusterResultArray[partitionNumber] == clusterNumber) {
+        					clusterXvalueList.add(partitionNumber, 1.0);
         				} else {
-        					clusterXvalueList.add(i, 0.0);
+        					clusterXvalueList.add(partitionNumber, 0.0);
         				}
         			}
-        			Attribute clusterX = new NumericAttribute("cluster_" + c, clusterXvalueList);
+        			Attribute clusterX = new NumericAttribute("cluster_" + clusterNumber, clusterXvalueList);
         			amuseDataSet.addAttribute(clusterX);
         		}
         		AmuseLogger.write("FastKMeansAdapter", Level.DEBUG, "FastKMeansAdapter successfully edited the result to AMUSE standad");
         		
-        		Testing.printMinMax(amuseDataSet);
+        		//Testing.printMinMax(amuseDataSet);
             
-            // Save to .arff file
-            String outputPath = AmusePreferences.get(KeysStringValue.AMUSE_PATH) + File.separator + "experiments" + File.separator + "FastKMeansAdapter_Result.arff";
-            amuseDataSet.saveToArffFile(new File(outputPath));
+            // Save the DataSet to .arff file
+            //String outputPath = AmusePreferences.get(KeysStringValue.AMUSE_PATH) + File.separator + "experiments" + File.separator + "FastKMeansAdapter_Result.arff";
+            //amuseDataSet.saveToArffFile(new File(outputPath));
             
             // Give the amuseDataSet to the ClassificationConfiguration so it may be put together and saved there
             ((ClassificationConfiguration)(this.correspondingScheduler.getConfiguration())).setInputToClassify(new DataSetInput(amuseDataSet));

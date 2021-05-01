@@ -22,7 +22,9 @@ public class Testing {
 	public static void printMinMax (DataSet data) {
 		String minMaxValues = "";
 		double minAverage = 0.0;
+		double minTrue = (double) data.getAttribute(0).getValueAt(0);
 		double maxAverage = 0.0;
+		double maxTrue = 0.0;
 		
 		ArrayList<String> attributes = (ArrayList<String>) data.getAttributeNames();
 		for (int attr=0; attr < attributes.size(); attr++) {
@@ -35,13 +37,12 @@ public class Testing {
 				
 				for (int value=1; value < data.getValueCount(); value++) {
 					double currentValue = (double) currentAttribute.getValueAt(value);
-					if (currentValue < min) {
-						min = currentValue;
-					}
-					if (currentValue > max) {
-						max = currentValue;
-					}
+					if (currentValue < min) { min = currentValue; }
+					if (currentValue > max) { max = currentValue; }
 				}
+				
+				if (min < minTrue) { minTrue = min; }
+				if (max > maxTrue) { maxTrue = max; }
 				
 				minAverage += min;
 				maxAverage += max;
@@ -51,6 +52,7 @@ public class Testing {
 		minAverage = minAverage / attributes.size();
 		maxAverage = maxAverage / attributes.size();
 		//AmuseLogger.write("Testing", Level.DEBUG, "The attributes have the following ranges: \n" + minMaxValues);
+		AmuseLogger.write("Testing", Level.DEBUG, "The true min value is " + minTrue + " and the true max value is " + maxTrue);
 		AmuseLogger.write("Testing", Level.DEBUG, "On average there is a min value of " + minAverage + " and a max value of " + maxAverage);
 	}
 	
