@@ -197,7 +197,7 @@ public class FastKMeansAdapter extends AmuseTask implements ClassifierUnsupervis
         		}
         		AmuseLogger.write("FastKMeansAdapter", Level.DEBUG, "FastKMeansAdapter successfully edited the result to AMUSE standad");
         		
-        		//Testing.printMinMax(amuseDataSet);
+        		Testing.printMinMax(amuseDataSet);
             
             // Save the DataSet to .arff file
             //String outputPath = AmusePreferences.get(KeysStringValue.AMUSE_PATH) + File.separator + "experiments" + File.separator + "FastKMeansAdapter_Result.arff";
