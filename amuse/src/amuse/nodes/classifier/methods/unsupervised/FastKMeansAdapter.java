@@ -112,10 +112,10 @@ public class FastKMeansAdapter extends AmuseTask implements ClassifierUnsupervis
 
                 // Set the parameters
                 clusterer.setParameter("determine_good_start_values", String.valueOf(determine_good_start_values));
-                clusterer.setParameter("remove_unlabeled", "false");
-                clusterer.setParameter("k", new Integer(k).toString());
-                clusterer.setParameter("max_optimization_steps", new Integer(max_opt_steps).toString());
-                clusterer.setParameter("max_runs", new Integer(max_runs).toString());
+                clusterer.setParameter(FastKMeans.PARAMETER_REMOVE_UNLABELED, "false");
+                clusterer.setParameter(FastKMeans.PARAMETER_K, new Integer(k).toString());
+                clusterer.setParameter(FastKMeans.PARAMETER_MAX_OPTIMIZATION_STEPS, new Integer(max_opt_steps).toString());
+                clusterer.setParameter(FastKMeans.PARAMETER_MAX_RUNS, new Integer(max_runs).toString());
                 clusterer.setParameter("use_local_random_seed", String.valueOf(use_local_random_seed));
                 clusterer.setParameter("local_random_seed", new Integer(local_random_seed).toString());
                 

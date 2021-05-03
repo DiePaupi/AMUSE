@@ -29,14 +29,13 @@ import amuse.util.AmuseLogger;
 import amuse.util.LibraryInitializer;
 
 /**
- * Clusters given data by using Ward's Agglomeration
+ * Clusters given data by using Wards Agglomeration
  * @author Pauline Speckmann
- *
  */
 public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInterface {
 	
-	/** Defines the numerical measure option (e.g. euclidean distance) */
-	private String numericalMeasure;
+	/** Defines the method to be used ("classic" (iterative) or "LWDissimilarityUpdateFormula" (recursive)) */
+	private String method;
 	/** Desired cluster number */
 	private int k;
 	/** If there's only one song, keep the partitions separated for music segmentation */
@@ -44,113 +43,114 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
 	
 	/** Contains the values for every song and their features */
 	private double[][] allValues;
-	/** */
+	/** Contains lists of integers where each represents a cluster with the contained integers representing the songs (partitions) belonging to that cluster */
 	private List<List<Integer>> clusterAffiliation;
-	/** */
+	/** A dendrogram representing the current clusters */
 	private Dendrogram dendo;
 
-	public void setParameters(String parameterString) {
-
-        // Should the default parameters be used? Or are values given?
+	
+	@Override
+	/** Receives the parameters given by the user and sets them accordingly */
+	public void setParameters(String parameterString) throws NodeException {
+		// Should the default parameters be used or are values given?
         if(parameterString == "" || parameterString == null) {
-        	numericalMeasure = new String("Classic");
+        	method = new String("Classic");
         	// If no desired cluster number is specified the whole dendrogram will be created
         	k = 0;
         } else {
         	StringTokenizer tok = new StringTokenizer(parameterString, "_");
-        	numericalMeasure = tok.nextToken();
+        	method = tok.nextToken();
         	k = new Integer(tok.nextToken());
+        }
+        
+        // Check if all parameters are in range
+        if (k < 0 || (!method.equals("Classic") && !method.equals("LWDissimilarityUpdateFormula"))) {
+        	throw new NodeException("Ward: One of the parameters was out of range!");
         }
     }
 
-    /*
-     * (non-Javadoc)
-     * @see amuse.interfaces.AmuseTaskInterface#initialize()
-     */
+	@Override
     public void initialize() throws NodeException {
         // Nothing to do here
     }
     
-    /*
-     * (non-Javadoc)
-     * @see amuse.nodes.classifier.interfaces.ClassifierInterface#classify(java.lang.String, java.util.ArrayList, java.lang.String)
-     */
-    /* (non-Javadoc)
-     * @see amuse.nodes.classifier.interfaces.ClassifierInterface#classify(java.lang.String)
-     */
-	@Override
+	
+    @Override
+    /**  */
 	public void classify() throws NodeException {
 		
 		try {
-        	//-----------------------------------------------------------------------------------------------------------------------------
-        	// (1) Greife auf ArrayList<SongPartitionsDescription> descriptionOfClassifierInput aus dem ClassifierNodeScheduler zu
-        	//-----------------------------------------------------------------------------------------------------------------------------
+        	//------------------------------------------------------------------------------------------------------------------------------------------------------
+        	// (1) Get ArrayList<SongPartitionsDescription> descriptionOfClassifierInput to get information about the number of songs.
+        	//------------------------------------------------------------------------------------------------------------------------------------------------------
 			
-			/* Gets the DataSet given by the user in the Classifier AMUSE task */
-	        DataSet dataSetToClassify = ((DataSetInput)((ClassificationConfiguration)this.correspondingScheduler.
-	         getConfiguration()).getInputToClassify()).getDataSet();
+			/** DataSet of music (partitions) to be classified */
+	        DataSet dataSetToClassify = ((DataSetInput)((ClassificationConfiguration)this.correspondingScheduler.getConfiguration()).getInputToClassify()).getDataSet();
 	        
-	        // TESTING
-	        //dataSetToClassify = Testing.createTestDataSet(dataSetToClassify);
-	        
-        	 ArrayList<SongPartitionsDescription> descriptionOfClassifierInput = 
-        			 ((ClassifierNodeScheduler)this.correspondingScheduler).getDescriptionOfClassifierInput();
+	        // The descriptionOfClassifierInput holds information about the number of songs and their partitions
+	        ArrayList<SongPartitionsDescription> descriptionOfClassifierInput =  ((ClassifierNodeScheduler)this.correspondingScheduler).getDescriptionOfClassifierInput();
         	
         	int numberOfSongs = descriptionOfClassifierInput.size();
-        	if (numberOfSongs == 1 ) {
-        		keepPartitions = true;
-        	}
+        	// If there is only one song the partitions should be kept for music segmentation
+        	if (numberOfSongs == 1 ) { keepPartitions = true; }
         	int numberOfFeatures = dataSetToClassify.getAttributeCount();
-        	AmuseLogger.write("WardAdapter - initializing", Level.DEBUG, "There are " + numberOfFeatures + " to be saved.");
+        	//AmuseLogger.write("WardAdapter - initializing", Level.DEBUG, "There are " + numberOfFeatures + " to be saved.");
         	
-        	if (!keepPartitions && (k < 0 || k >= numberOfSongs)) {
+        	// Check the range of parameter k again
+        	if (!keepPartitions && k >= numberOfSongs) {
         		throw new NodeException("WardAdapter - classify(): Your given k wasn't in range. "
         				+ "Try something bigger than 0 and smaller than your number of songs.");
-        	} else if (keepPartitions && (k < 0 || k >= descriptionOfClassifierInput.get(0).getStartMs().length)) {
+        	} else if (keepPartitions && k >= descriptionOfClassifierInput.get(0).getStartMs().length) {
         		throw new NodeException("WardAdapter - classify(): Your given k wasn't in range. "
-        				+ "Try something bigger than 0 and smaller than your number of songpartitions.");
+        				+ "Try something bigger than 0 and smaller than your number of song partitions.");
         	}
         	
         	
-        	//-----------------------------------------------------------------------------------------------------------------------------
-        	// (2) Alle Partitionen eines Songs aus dem descriptionOfClassifierInput einem Cluster zuordnen
-        	//-----------------------------------------------------------------------------------------------------------------------------
+        	//------------------------------------------------------------------------------------------------------------------------------------------------------
+        	// (2) Fill songIdsAnNames and allValues. Sort all songs / partitions into their own cluster via clusterAffiliation.
+        	//------------------------------------------------------------------------------------------------------------------------------------------------------
         	
         	List<idAndName> songIdsAndNames = new ArrayList<idAndName>();
         	
+        	// If the partitions should be kept each partition will be treated as if it were a whole own song
         	if (keepPartitions) {
         		int numberOfPartitions = descriptionOfClassifierInput.get(0).getStartMs().length;
         		allValues = new double[numberOfPartitions][numberOfFeatures];
         		
-        		for (int i=0; i<numberOfPartitions; i++) {
-        			idAndName current = new idAndName(i, "Partition "+i);
+        		for (int partitionNumber=0; partitionNumber<numberOfPartitions; partitionNumber++) {
+        			idAndName current = new idAndName(partitionNumber, "Partition "+partitionNumber);
         			songIdsAndNames.add(current);
         			
-        			for (int x=0; x < numberOfFeatures; x++) {
-    					allValues[i][x] = allValues[i][x] + (double) dataSetToClassify.getAttribute(x).getValueAt(i);
+        			for (int featureNumber=0; featureNumber < numberOfFeatures; featureNumber++) {
+    					allValues[partitionNumber][featureNumber] = allValues[partitionNumber][featureNumber] + 
+    							(double) dataSetToClassify.getAttribute(featureNumber).getValueAt(partitionNumber);
     				}
         		}
         		
-        	} else {
+        	} 
+        	// Otherwise all partitions belonging to a song will be summarized
+        	else {
         		/** allValues contains for each song every feature value based on descriptionOfClassifierInput - [songID][featureValuesOfOneSong] */
         		allValues = new double[numberOfSongs][numberOfFeatures];
         		
-        		// Bilde den Durchschnitt (TODO oder Median) aller Partitionswerte
+        		// Calculate the mean (TODO or median) of all partition values belonging to a song
         		int partitionsAlreadySeen = 0;
-        		for (int i=0; i < numberOfSongs; i++) {
+        		for (int songNumber=0; songNumber < numberOfSongs; songNumber++) {
         			
-        			int numberOfPartitionsForSongI = descriptionOfClassifierInput.get(i).getStartMs().length;
+        			int numberOfPartitionsForSongI = descriptionOfClassifierInput.get(songNumber).getStartMs().length;
         			// Save the song path with it's id
-        			idAndName current = new idAndName(i, descriptionOfClassifierInput.get(i).getPathToMusicSong());
+        			idAndName current = new idAndName(songNumber, descriptionOfClassifierInput.get(songNumber).getPathToMusicSong());
         			songIdsAndNames.add(current);
         			
-        			for (int j= partitionsAlreadySeen; j < partitionsAlreadySeen+numberOfPartitionsForSongI; j++) {
-        				for (int x=0; x < numberOfFeatures; x++) {
-        					allValues[i][x] = allValues[i][x] + (double) dataSetToClassify.getAttribute(x).getValueAt(j);
+        			// For all partitions belonging to song number <songNumber> 
+        			for (int partitionNumber = partitionsAlreadySeen; partitionNumber < partitionsAlreadySeen+numberOfPartitionsForSongI; partitionNumber++) {
+        				for (int featureNumber=0; featureNumber < numberOfFeatures; featureNumber++) {
+        					allValues[songNumber][featureNumber] = allValues[songNumber][featureNumber] + 
+        							(double) dataSetToClassify.getAttribute(featureNumber).getValueAt(partitionNumber);
         				}
         			}
-        			for (int x=0; x < numberOfFeatures; x++) {
-    					allValues[i][x] = allValues[i][x] / numberOfPartitionsForSongI;
+        			for (int featureNumber=0; featureNumber < numberOfFeatures; featureNumber++) {
+    					allValues[songNumber][featureNumber] = allValues[songNumber][featureNumber] / numberOfPartitionsForSongI;
     				}
         			
         			partitionsAlreadySeen += numberOfPartitionsForSongI;
@@ -174,22 +174,26 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
         	dendo = new Dendrogram(clusterAffiliation, songIdsAndNames);
         	
         	
+        	//------------------------------------------------------------------------------------------------------------------------------------------------------
+        	// (3) Start the merging process with the chosen method.
+        	//------------------------------------------------------------------------------------------------------------------------------------------------------
         	
-        	if (numericalMeasure.equals("Classic")) {
+        	if (method.equals("Classic")) {
         		
-        		// UNTIL ALL CLUSTERS HAVE BEEN MERGED
+        		// Set the number of clusters where until it's been reached they'll be merged
             	int mergeUntilThisClusterNumber;
             	if (k == 0 || k == 1) { mergeUntilThisClusterNumber = 2; } 
             	else { mergeUntilThisClusterNumber = k; }
             	
-            	AmuseLogger.write("WardAdapter", Level.DEBUG, "(3) The merge until this cluster number parameter is " +mergeUntilThisClusterNumber+ " - "
+            	AmuseLogger.write("WardAdapter", Level.DEBUG, "(4) The merge until this cluster number parameter is " +mergeUntilThisClusterNumber+ " - "
             			+ "Starting the while loop with: while (" +clusterAffiliation.size()+ " > " +mergeUntilThisClusterNumber+ ");");
         		
-        		while (clusterAffiliation.size() > mergeUntilThisClusterNumber) {        		
-        		//-----------------------------------------------------------------------------------------------------------------------------
-            	// (3) Berechne die (un-)ähnlichkeits Matrix aller Songs mit der Lance-William Sache
-            	//	   Hier vielleicht auch Wahl zwischen LW und Klassisch lassen
-            	//-----------------------------------------------------------------------------------------------------------------------------
+        		while (clusterAffiliation.size() > mergeUntilThisClusterNumber) {       
+        			
+        			//-----------------------------------------------------------------------------------------------------------------------------------------
+        			// (3.1) Berechne die (un-)ähnlichkeits Matrix aller Songs mit der Lance-William Sache
+        			//	     Hier vielleicht auch Wahl zwischen LW und Klassisch lassen
+        			//-----------------------------------------------------------------------------------------------------------------------------------------
         		
         			/** The dissimilarityMatrix stores the ESS values for the centroid of cluster m united with cluster n */
         			double[][] dissimilarityMatrix = calculateDissimilarityMatrix();
@@ -202,11 +206,11 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
         			List<Integer> clusterToBeMergedB = clusterAffiliation.get((int) dissimilarityMatrixMinValues[0][0]);
         			List<Integer> mergedCluster = this.setMerge(clusterToBeMergedA, clusterToBeMergedB);
             	
-            	//-----------------------------------------------------------------------------------------------------------------------------
-            	// (4) Für das ähnlichste Clusterpaar:
-            	//	   	- Begutachte die n-1 verbleibenden Cluster mit einer neuen Matrix und dem entsprechenden vereinigten Distanzmaß
-            	//		- Soll noch ein drittes zum Cluster hinzugefügt werden oder lieber ein neues Paar erstellt?
-            	//-----------------------------------------------------------------------------------------------------------------------------
+        			//-----------------------------------------------------------------------------------------------------------------------------------------
+        			// (5) Für das ähnlichste Clusterpaar:
+        			//	   	- Begutachte die n-1 verbleibenden Cluster mit einer neuen Matrix und dem entsprechenden vereinigten Distanzmaß
+        			//		- Soll noch ein drittes zum Cluster hinzugefügt werden oder lieber ein neues Paar erstellt?
+        			//-----------------------------------------------------------------------------------------------------------------------------------------
             	
         			// If the desired cluster number hasn't been reached yet
         			if (mergeUntilThisClusterNumber < clusterAffiliation.size()) {
@@ -270,7 +274,7 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
         			}
         		}
         	}
-        	else if (numericalMeasure.equals("LWDissimilarityUpdateFormula")) {
+        	else if (method.equals("LWDissimilarityUpdateFormula")) {
         		
         		/** The dissimilarityMatrix stores the ESS values for the centroid of cluster m united with cluster n */
     			double[][] dissimilarityMatrix = calculateDissimilarityMatrix();
@@ -290,7 +294,7 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
             
     		
     		//-----------------------------------------------------------------------------------------------------------------------------
-        	// (5) SAVE
+        	// (6) SAVE
         	//-----------------------------------------------------------------------------------------------------------------------------
     		AmuseLogger.write("WardAdapter", Level.DEBUG, "(5) Now saving.");
     		String outputPath = AmusePreferences.get(KeysStringValue.AMUSE_PATH) + File.separator + "experiments" + File.separator;
@@ -347,43 +351,49 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
 	// Private help methods to calculate things so that the main method classify() stays nice
 	//---------------------------------------------------------------------------------------------------------------------------------
 	
+    /**
+     * Calculates the dissimilarity matrix based on the current clusters (clusterAffiliation is global)
+     * @return The finished dissimilarity matrix
+     */
 	private double[][] calculateDissimilarityMatrix () {
 		
 		/** The dissimilarityMatrix stores the ESS values for the centroid of cluster m united with cluster n */
     	double[][] dissimilarityMatrix = new double[clusterAffiliation.size()][clusterAffiliation.size()];
     		
-    	// m sind die Splaten und n die Zeilen
-    	for (int m=0; m < clusterAffiliation.size(); m++) {
+    	// Fill the matrix by going through the columns and for each column through the rows
+    	for (int columnNumber=0; columnNumber < clusterAffiliation.size(); columnNumber++) {
     		
-    		// Damit der centroid nicht jedes Mal neu berechnet werden muss geschieht dies einmal hier 
-    		double[] centroidM = this.calculateCentroid(clusterAffiliation.get(m));
+    		// Calculate the centroid of the cluster represented by this column
+    		double[] centroidColumn = this.calculateCentroid(clusterAffiliation.get(columnNumber));
     		
-    		for (int n=0; n < clusterAffiliation.size(); n++) {
+    		for (int rowNumber=0; rowNumber < clusterAffiliation.size(); rowNumber++) {
     			
-    			// Falls es sich um dasselbe Cluster handelt, wird der Wert in der Matirx auf 0 gesetzt
-        		if (n == m) {
-        			dissimilarityMatrix[m][n] = 0.0;
+    			// If the columnNumber is the same as the rowNumber (so it is the same cluster): Set the value to zero
+        		if (rowNumber == columnNumber) {
+        			dissimilarityMatrix[columnNumber][rowNumber] = 0.0;
         		} 
-        		// Falls die MatrixDiagonale überschritten wird doppeln sich die Werte und werden aus Effizenzgründen nicht erneut berechnet
-        		else if (n < m) {
-        			dissimilarityMatrix[m][n] = dissimilarityMatrix[n][m];
-        		} else {
-        			
-        			//AmuseLogger.write("WardAdapter", Level.DEBUG, "Statring to calculate the DISSIMILARITY for n=" +n+ " and m=" +m);
+        		// If we're to the right of the diagonal of the matrix, there is no need to calculate the value as it already has been calculated 
+        		// on the matrix field to the left of the diagonal (with row and column number switched)
+        		else if (rowNumber < columnNumber) {
+        			dissimilarityMatrix[columnNumber][rowNumber] = dissimilarityMatrix[rowNumber][columnNumber];
+        		} 
+        		// Else calculate the dissimilarity
+        		else {
         			
         			double dissimilarity = 0.0;
-        			double[] centroidN = this.calculateCentroid(clusterAffiliation.get(n));
+        			double[] centroidRow = this.calculateCentroid(clusterAffiliation.get(rowNumber));
     				
         			dissimilarity = this.calculateWardsCriterion(
-            				centroidN, clusterAffiliation.get(n).size(), 
-            				centroidM, clusterAffiliation.get(m).size());
+            				centroidRow, clusterAffiliation.get(rowNumber).size(), 
+            				centroidColumn, clusterAffiliation.get(columnNumber).size());
         			
         			
         			if (dissimilarity == 0.0) {
         				AmuseLogger.write("WardAdapter", Level.WARN, "The dissimilarity wasn't calculated correctly!");
         			}
         			
-        			dissimilarityMatrix[m][n] = dissimilarity;
+        			// Set the dissimilarity!
+        			dissimilarityMatrix[columnNumber][rowNumber] = dissimilarity;
         		}
         	}
     	}

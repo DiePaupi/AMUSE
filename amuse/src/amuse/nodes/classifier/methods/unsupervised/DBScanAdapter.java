@@ -89,10 +89,10 @@ public class DBScanAdapter extends AmuseTask implements ClassifierUnsupervisedIn
                 // Create the RapidMiner DBScan operator
                 Operator clusterer = OperatorService.createOperator(DBScan.class);
 
-                // Set the parameters
+                // Set the parameters (parameter key strings for epsilon and min_points are private in RM version 9.7)
                 clusterer.setParameter("epsilon", new Double(epsilon).toString());
                 clusterer.setParameter("min_points", new Integer(min_points).toString());
-                clusterer.setParameter("remove_unlabeled", "false");
+                clusterer.setParameter(DBScan.PARAMETER_REMOVE_UNLABELED, "false");
                 
                 // Set the distance measure
                 clusterer.setParameter(DistanceMeasures.PARAMETER_MEASURE_TYPES, DistanceMeasures.MEASURE_TYPES[DistanceMeasures.NUMERICAL_MEASURES_TYPE]);

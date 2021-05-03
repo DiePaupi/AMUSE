@@ -20,16 +20,17 @@ public class Dendrogram {
 	List<Node> clusters;
 	
 	/**
-	 * Creates a Dendogram (Tree like structure) for hierarchical clustering
-	 * @param input = A List of Lists<Integer> which each contain the SongIDs belonging to a cluster
+	 * Creates a Dendrogram (a binary tree like structure) for hierarchical clustering
+	 * @param input = A List of <Integer>-Lists which each contain the SongIDs belonging to the cluster represented by that <Integer>-List
 	 */
 	public Dendrogram (List<List<Integer>> clusterInput, List<idAndName> songIdsAndNames) {
 		
 		clusters = new ArrayList<Node>();
 		
-		for (int c=0; c < clusterInput.size(); c++) {
-			Node current = new Node(""+c, songIdsAndNames.get(c).getName(), clusterInput.get(c), null, null);
-			clusters.add(c, current);
+		// Create a new node for each cluster from clusterInput and add that node to the global clusters list
+		for (int clusterNumber=0; clusterNumber < clusterInput.size(); clusterNumber++) {
+			Node current = new Node(""+clusterNumber, songIdsAndNames.get(clusterNumber).getName(), clusterInput.get(clusterNumber), null, null);
+			clusters.add(clusterNumber, current);
 		}
 	}
 
@@ -501,13 +502,21 @@ public class Dendrogram {
 	/** Internal Node Class -  works like a node in any tree */
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	private class Node {
+		/** Identifies the cluster by combining the (string) ids of the left and right child with a + in the middle and a ; at the end */
 		private String id;
+		/** Saves the path of all songs belonging to this node (cluster) divided by a line separator */
 		private String name;
+		/** Keeps track of all songs belonging to this cluster by adding their individual (integer) ids to this list */
 		private List<Integer> value;
+		/** The parent node - is empty at first and will only be set after this node (cluster) as been merged with another */
 		private Node parent;
+		/** The left child node */
 		private Node left;
+		/** The right child node */
 		private Node right;
 		
+		
+		/** Internal node class where each node represents a cluster that may have already been merged into a new node */
 		private Node (String id, String name, List<Integer> value, Node left, Node right) {
 			this.id = id;
 			this.name = name;
@@ -517,6 +526,7 @@ public class Dendrogram {
 			this.right = right;
 		}
 		
+		// Getter and setter for all the variables
 		private String getID () {return this.id;}
 		private String getName () {return this.name;}
 		private List<Integer> getValue () {return this.value;}
