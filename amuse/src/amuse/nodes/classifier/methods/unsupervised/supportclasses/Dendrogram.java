@@ -374,6 +374,10 @@ public class Dendrogram {
 	}
 	
 	
+	/**
+	 * @param node = Any given node
+	 * @return The height of the first given node
+	 */
 	private int findHeight(Node node) {
 		  if (node == null) return 0;
 		  return 1 + Math.max(findHeight(node.getLeft()), findHeight(node.getRight()));
@@ -381,11 +385,11 @@ public class Dendrogram {
 	
 	
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	/** Print the dendogram as Tikz Forest in LaTeX */
+	/** Print the dendrogram as Tikz Forest in LaTeX */
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	public void printTikzDendrogram (String path) throws NodeException {
 		
-		File dendogramFile = new File(path + "Ward_DENDOGRAM.tex");
+		File dendogramFile = new File(path + "Ward_DENDROGRAM.tex");
 		BufferedWriter fileWriter;
 		try {
 			fileWriter = new BufferedWriter(new FileWriter(dendogramFile));
@@ -409,22 +413,25 @@ public class Dendrogram {
 					+ "\\begin{document} \n";
 			fileWriter.append( fileHead );
 			
-			// Add a new Dendogram for every cluster
-			for (int c=0; c < clusters.size(); c++) {
+			// Add a new Dendrogram for every cluster
+			for (int clusterNumber=0; clusterNumber < clusters.size(); clusterNumber++) {
 				fileWriter.append( "\\begin{forest} \n" + "   my tree \n" );
 				
-				//
-				Node current = clusters.get(c);
+				// Get the node structure for every "main" cluster in clusters
+				Node current = clusters.get(clusterNumber);
 				String currentDendogram = this.getNodeStructure(current, current.getValue().size());
+				
+				// Add the node structure to the .tex file
 				fileWriter.append( currentDendogram );
+				fileWriter.append( "\\end{forest} \n \n" );
 				
 				// End the cluster (and if it's NOT the last, add some space)
-				fileWriter.append( "\\end{forest} \n \n" );
-				if (c < clusters.size() -1) {
+				if (clusterNumber < clusters.size() -1) {
 					fileWriter.append( "\\vspace*{1cm} \n \n" );
 				}
 			}
 			
+			// End the document
 			fileWriter.append( "\\end{document}" );
 			
 			fileWriter.close();
@@ -434,34 +441,51 @@ public class Dendrogram {
 	}
 	
 	
+	/**
+	 * This is a recursive working method to determine a TikZ Forest appropriate node structure
+	 * @param current = the current node to be looked at
+	 * @param maxDepth = the maximal depth of the dendrogram
+	 * @return A TikZ Forest appropriate node structure as String which can be added to a LaTeX file
+	 */
 	private String getNodeStructure (Node current, int maxDepth) {
 		String result = "";
 		
 		if (current != null) {
 			
+			// The indent per depth level are 3 spaces
 			String indent = "   ";
-			for (int v = current.getValue().size(); v < maxDepth; v++) {
-				indent += "   ";
+			// Set the indent for the following part
+			for (int depthLevel = current.getValue().size(); depthLevel < maxDepth; depthLevel++) {
+				indent += indent;
 			}
 			
+			// A new node must be opened with a [
 			String openNode = indent + "[";
 			
 			// If this is a leaf node
 			if (current.getValue().size() == 1) {
+				
+				// A leaf node holds just one song and should be shown in the LaTeX dendrogram as "(x) <Song
 				openNode += "(" + current.getValue().get(0) + ") " + this.getSongnameFromPath(current);
+				// Close the node with a ] and add a line separator
 				return openNode + "] \n";
+				
 			}
 			// If this is a middle node wit a left and right child
 			else if (current.getLeft() != null && current.getRight() != null) {
+				
+				// Get the song ids of the songs in this cluster
 				openNode += this.integerListToString(current.getValue());
 				
+				// Recursive call
 				String leftChildsString = this.getNodeStructure(current.getLeft(), maxDepth);
 				String rightChildsString = this.getNodeStructure(current.getRight(), maxDepth);
 				
+				// Close the node with a ] and add a line separator
 				String endNode = indent + "] \n";
 				return openNode + "\n" + leftChildsString + rightChildsString + endNode;
 			}
-			// Else
+			// Else: Error
 			else {
 				AmuseLogger.write("DENDOGRAM", Level.WARN, "Something went wrong while printing the dendogram structure.");
 			}
@@ -473,7 +497,7 @@ public class Dendrogram {
 	
 	/**
 	 * @param current = A leaf node
-	 * @return Only the song name of this node (without the rest of the path)
+	 * @return Only the song name of this leaf node (without the rest of the path)
 	 */
 	private String getSongnameFromPath (Node current) {
 		String result = "";
@@ -483,10 +507,12 @@ public class Dendrogram {
 			char[] name = current.getName().toCharArray();
 			// Ignore the last 4 chars as they are something like ".mp3" or ".wav"
 			for (int c = name.length -5; c >= 0; c--) {
-				// If we have reached the end of the song name there'll be a /
-				if (name[c] == '/') {
+				// If we have reached the end of the song name there'll be a / or \
+				if (name[c] == '/' || name[c] =='\\') {
 					break;
-				} else if (name[c] == '_') {
+				} 
+				// A underscore makes problems in LaTeX so it needs to be replaced
+				else if (name[c] == '_') {
 					result = '-' + result;
 				} else {
 					result = name[c] + result;

@@ -191,8 +191,7 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
         		while (clusterAffiliation.size() > mergeUntilThisClusterNumber) {       
         			
         			//-----------------------------------------------------------------------------------------------------------------------------------------
-        			// (3.1) Berechne die (un-)ähnlichkeits Matrix aller Songs mit der Lance-William Sache
-        			//	     Hier vielleicht auch Wahl zwischen LW und Klassisch lassen
+        			// (3.1) Calculate the dissimilarity matrix, find the true and second minimum and merge the clusters with the true minimum dissimilarity.
         			//-----------------------------------------------------------------------------------------------------------------------------------------
         		
         			/** The dissimilarityMatrix stores the ESS values for the centroid of cluster m united with cluster n */
@@ -207,36 +206,36 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
         			List<Integer> mergedCluster = this.setMerge(clusterToBeMergedA, clusterToBeMergedB);
             	
         			//-----------------------------------------------------------------------------------------------------------------------------------------
-        			// (5) Für das ähnlichste Clusterpaar:
-        			//	   	- Begutachte die n-1 verbleibenden Cluster mit einer neuen Matrix und dem entsprechenden vereinigten Distanzmaß
-        			//		- Soll noch ein drittes zum Cluster hinzugefügt werden oder lieber ein neues Paar erstellt?
+        			// (3.2) For the most similar pair of clusters (which have just been merged):
+        			//       - Look at the remaining n-1 clusters by building a new matrix (actually an array) just for the merges between the mergesCluster
+        			//         and the remaining ones
+        			//	   	 - If the minimum of this new small matrix (array) is smaller than the second minimum value of the original matrix:
+        			//         Merge this third cluster with the mergedCluster to get the minimal dissimilarity increase for n-2 clusters
+        			//		   Otherwise skip this and begin a new iteration to merge a new pair of clusters
         			//-----------------------------------------------------------------------------------------------------------------------------------------
             	
         			// If the desired cluster number hasn't been reached yet
         			if (mergeUntilThisClusterNumber < clusterAffiliation.size()) {
             		
-        				/** The dissimilarityMatrixTwo stores the ESS values for the centroid of cluster m united with cluster n */
         				// The last cluster will not be evaluated since it it the same as the just merged cluster
+        				/** The dissimilarityMatrixTwo stores the ESS values for the centroid of cluster m united with cluster n */
         				double[] dissimilarityBetweenMergedClusterAndTheOthers = new double[clusterAffiliation.size() -1];
         				double[] centroidMergedCluster = this.calculateCentroid(mergedCluster);
-                		
                 	
-        				for (int m=0; m < dissimilarityBetweenMergedClusterAndTheOthers.length; m++) {
+        				// Fill the new dissimilarity matrix (array)
+        				for (int columnNumber=0; columnNumber < dissimilarityBetweenMergedClusterAndTheOthers.length; columnNumber++) {
                 			
-        					//AmuseLogger.write("WardAdapter", Level.DEBUG, "Filling the dissimilarity array at position " +m
-        					//		+ " of " + (dissimilarityBetweenMergedClusterAndTheOthers.length));
-                		
         					double dissimilarity = 0.0;
-        					double[] centroidM = this.calculateCentroid(clusterAffiliation.get(m));
+        					double[] centroidColumn = this.calculateCentroid(clusterAffiliation.get(columnNumber));
                 				
         					dissimilarity = this.calculateWardsCriterion(
         							centroidMergedCluster, mergedCluster.size(), 
-        							centroidM, clusterAffiliation.get(m).size());
+        							centroidColumn, clusterAffiliation.get(columnNumber).size());
                     	
         					if (dissimilarity == 0.0) {
         						AmuseLogger.write("WardAdapter - dissArray", Level.WARN, "The dissimilarity wasn't calculated correctly!");
         					}
-        					dissimilarityBetweenMergedClusterAndTheOthers[m] = dissimilarity;
+        					dissimilarityBetweenMergedClusterAndTheOthers[columnNumber] = dissimilarity;
         				}
                 	
                 	
@@ -253,16 +252,15 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
         				// Is the next best merge is with the justMerged cluster, merge again!
         				// If not, then continue to the next iteration
         				if (minDisValue < dissimilarityMatrixMinValues[2][1]) {
-                		
         					List<Integer> clusterToBeMergedC = clusterAffiliation.get(minClusterNumber);
         					this.setMerge(mergedCluster, clusterToBeMergedC);
         				}
-        				
-        				
+
         			}
             	
-        			// IF ONLY TWO CLUSTERS ARE LEFT AND WE WANT ONLY ONE BIG CLUSTER
-        			// JUST MERGE THEM NOW
+        			//-----------------------------------------------------------------------------------------------------------------------------------------
+        			// (3.3) If only two clusters are left and a big cluster is wished for: Merge them now without calculations
+        			//-----------------------------------------------------------------------------------------------------------------------------------------
         			if (clusterAffiliation.size() == 2 && (k == 0 || k == 1)) {
             		
         				List<Integer> firstCluster = clusterAffiliation.get(0);
@@ -274,6 +272,8 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
         			}
         		}
         	}
+        	// If the LWDUF method was chosen: 
+        	// The method works recursive so here the recursive help method is called here after the initial dissimilarity matrix was calculated
         	else if (method.equals("LWDissimilarityUpdateFormula")) {
         		
         		/** The dissimilarityMatrix stores the ESS values for the centroid of cluster m united with cluster n */
@@ -294,38 +294,40 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
             
     		
     		//-----------------------------------------------------------------------------------------------------------------------------
-        	// (6) SAVE
+        	// (4) SAVE
         	//-----------------------------------------------------------------------------------------------------------------------------
-    		AmuseLogger.write("WardAdapter", Level.DEBUG, "(5) Now saving.");
+    		AmuseLogger.write("WardAdapter", Level.DEBUG, "(4) Now saving.");
     		String outputPath = AmusePreferences.get(KeysStringValue.AMUSE_PATH) + File.separator + "experiments" + File.separator;
     		
+    		// Create a DateSet for the results
     		DataSet amuseDataSet = new DataSet("WardResult_DataSet");
     		
-    		for (int x=0; x < numberOfFeatures; x++ ) {
+    		// Create the feature attributes, fill them according to the values of allValues and add them to the result DataSet
+    		for (int featureNumber=0; featureNumber < numberOfFeatures; featureNumber++ ) {
     			List<Double> featureXList = new ArrayList<Double>();
     			
-    			for (int i=0; i < numberOfSongs; i++) {
-    				featureXList.add(allValues[i][x]);
+    			for (int songNumber=0; songNumber < numberOfSongs; songNumber++) {
+    				featureXList.add(allValues[songNumber][featureNumber]);
     			}
     			
-    			Attribute featureX = new NumericAttribute( dataSetToClassify.getAttribute(x).getName() , featureXList);
+    			Attribute featureX = new NumericAttribute( dataSetToClassify.getAttribute(featureNumber).getName() , featureXList);
     			amuseDataSet.addAttribute(featureX);
-    			
     		}
     		
-    		for (int c=0; c < clusterAffiliation.size(); c++ ) {
+    		// Create cluster attributes, fill them accordingly and add them to the result DataSet
+    		for (int clusterNumber=0; clusterNumber < clusterAffiliation.size(); clusterNumber++ ) {
     			List<Double> clusterCList = new ArrayList<Double>();
     			
     			for (int i=0; i < numberOfSongs; i++) {
     				
-    				if (clusterAffiliation.get(c).contains(i)) {
+    				if (clusterAffiliation.get(clusterNumber).contains(i)) {
     					clusterCList.add(i, 1.0);
     				} else {
     					clusterCList.add(i, 0.0);
     				}
     			}
     			
-    			Attribute clusterX = new NumericAttribute("cluster_" + c, clusterCList);
+    			Attribute clusterX = new NumericAttribute("cluster_" + clusterNumber, clusterCList);
     			amuseDataSet.addAttribute(clusterX);
     		}
     		
@@ -335,10 +337,11 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
         	// The ClassifierNodeScheduler proceedTask(...) returns or saves an ArrayList<ClassifiedSongPartitionsDescription>
     		((ClassificationConfiguration)(this.correspondingScheduler.getConfiguration())).setPartitionsAlreadySummerized(true);
             ((ClassificationConfiguration)(this.correspondingScheduler.getConfiguration())).setInputToClassify(new DataSetInput(amuseDataSet));
-    		amuseDataSet.saveToArffFile(new File(outputPath + "Ward_Result.arff"));
+    		//amuseDataSet.saveToArffFile(new File(outputPath + "Ward_Result.arff"));
     		
     		// Show the Dendogram in the AMUSE logger
-    		dendo.showClusters();
+    		//dendo.showClusters();
+            
     		// Save Dendogram print as .tex
     		dendo.printTikzDendrogram(outputPath);
         } catch(Exception e) {
@@ -347,9 +350,9 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
 	}
 	
 	
-	//---------------------------------------------------------------------------------------------------------------------------------
+	//--------------------------------------------------------------------------------------------------------------------------------------------------------------
 	// Private help methods to calculate things so that the main method classify() stays nice
-	//---------------------------------------------------------------------------------------------------------------------------------
+	//--------------------------------------------------------------------------------------------------------------------------------------------------------------
 	
     /**
      * Calculates the dissimilarity matrix based on the current clusters (clusterAffiliation is global)
@@ -402,8 +405,13 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
 	}
 	
 	
-	/** Given two clusters a new merged will be created, the dendogram will set the merge accordingly and 
-	 * the old clusters will be removed from clusterAffiliation while the merged one is added*/
+	/**
+	 * Given two clusters a new merged will be created, the dendrogram will set the merge accordingly and 
+	 * the old clusters will be removed from clusterAffiliation while the merged one is added
+	 * @param clusterA - Cluster A to be merged with cluster B
+	 * @param clusterB - Cluster B to be merged with cluster A
+	 * @return The merged cluster in form of a List<Integer>
+	 */
 	private List<Integer> setMerge (List<Integer> clusterA, List<Integer> clusterB) {
 		List<Integer> mergedCluster = new ArrayList<Integer>();
 		mergedCluster.addAll(clusterA);
@@ -424,21 +432,26 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
 	
 	/**
 	 * Recursive method which updates a given dissimilarity Matrix according to the LWUF until only k (or 1) cluster is left
-	 * @param dissimilarityMatrix
+	 * @param dissimilarityMatrix = The initial dissimilarity matrix calculated by the wards criterion
 	 */
 	private void updateDissimilarityMatrix (double[][] dissimilarityMatrix) {
 		
+		// Break condition for the recursion
 		if ((k > 0 && k == clusterAffiliation.size()) || (k == 0 && clusterAffiliation.size() == 1)) {
-			AmuseLogger.write("WardAdapter - LUWF", Level.DEBUG, "The LWUF recursion finished!");
-		} else if ((k==0 || k==1) && clusterAffiliation.size() == 2) {
+			AmuseLogger.write("WardAdapter - LUWF", Level.DEBUG, "The LWDUF recursion finished!");
+		} 
+		// The last two clusters (if one big cluster is wished for) can be merged without any calculations
+		else if ((k==0 || k==1) && clusterAffiliation.size() == 2) {
 			AmuseLogger.write("WardAdapter - LWUF", Level.DEBUG, "There are only 2 clusters left, so they'll be merged!");
 			
 			// Merge clusters
 			List<Integer> clusterToBeMergedA = clusterAffiliation.get(0);
 			List<Integer> clusterToBeMergedB = clusterAffiliation.get(1);
 			this.setMerge(clusterToBeMergedA, clusterToBeMergedB);
-			AmuseLogger.write("WardAdapter - LUWF", Level.DEBUG, "The LWUF recursion finished!");
-		} else {
+			AmuseLogger.write("WardAdapter - LUWF", Level.DEBUG, "The LWDUF recursion finished!");
+		} 
+		// Recursive call to update the dissimilarity matrix
+		else {
 			
 			// Get the minimum (in the first row) and the second minimum (in the second row) and the corresponding m and n values
 			// dissimilarityMatrixMinValues[1][0] = true minM, dissimilarityMatrixMinValues[0][0] = true minN, dissimilarityMatrixMinValues[2][0] = true minValue
@@ -450,6 +463,7 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
 			double[] centroidB = this.calculateCentroid(clusterAffiliation.get((int) dissimilarityMatrixMinValues[0][0]));
 			int sizeB = clusterAffiliation.get((int) dissimilarityMatrixMinValues[0][0]).size();
 
+			// Find out the indices of the clusters to be merged
 			int minIndex = 0;
 			int maxIndex = 0;
 			if (dissimilarityMatrixMinValues[1][0] < dissimilarityMatrixMinValues[0][0]) { // m<n
@@ -459,8 +473,7 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
 				minIndex = (int) dissimilarityMatrixMinValues[0][0];
 				maxIndex = (int) dissimilarityMatrixMinValues[1][0];
 			}
-			//AmuseLogger.write("WardAdapter - LUWF", Level.DEBUG, "The current indizes are min = " + minIndex + " and max = " + maxIndex);
-			//AmuseLogger.write("WardAdapter - LWUF", Level.DEBUG, "Amount of clusters before merge: " + clusterAffiliation.size());
+			//AmuseLogger.write("WardAdapter - LUWF", Level.DEBUG, "The current indices are min = " + minIndex + " and max = " + maxIndex);
 		
 			// Merge clusters
 			List<Integer> clusterToBeMergedA = clusterAffiliation.get((int) dissimilarityMatrixMinValues[1][0]);
@@ -477,58 +490,61 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
 		
 			clusterAffiliation.remove(clusterToBeMergedA);
 			clusterAffiliation.remove(clusterToBeMergedB);
-			// Das Cluster wird an dem minIndex eingefügt
+			// Merge into the cluster with the smaller index
 			clusterAffiliation.add(minIndex, mergedCluster); 
-			//AmuseLogger.write("WardAdapter - LWUF", Level.DEBUG, "The clusters were merged and added to postiton " + minIndex);
-			//AmuseLogger.write("WardAdapter - LWUF", Level.DEBUG, "Amount of clusters after merge: " + clusterAffiliation.size());
+			//AmuseLogger.write("WardAdapter - LWUF", Level.DEBUG, "The clusters were merged and added to position " + minIndex);
 			
-			// UPDATE THE MATRIX
+			
+			// UPDATE THE MATRIX -----------------------------------------------------------------------------------------------------------------------------------
 			double[][] updatedMatrix = new double[clusterAffiliation.size()][clusterAffiliation.size()];
 			
-			// m sind die Splaten und n die Zeilen
-	    	for (int m=0; m < clusterAffiliation.size(); m++) {
-	    		for (int n=0; n < clusterAffiliation.size(); n++) {
+			for (int columnNumber=0; columnNumber < clusterAffiliation.size(); columnNumber++) {
+	    		for (int rowNumber=0; rowNumber < clusterAffiliation.size(); rowNumber++) {
 	    			
-	    			// Falls es sich um dasselbe Cluster handelt, wird der Wert in der Matirx auf 0 gesetzt
-	    			if (n == m) {
-	        			updatedMatrix[m][n] = 0.0;
+	    			// If the columnNumber is the same as the rowNumber (so it is the same cluster): Set the value to zero
+	    			if (rowNumber == columnNumber) {
+	        			updatedMatrix[columnNumber][rowNumber] = 0.0;
 	        		} 
-	        		// Falls die MatrixDiagonale überschritten wird doppeln sich die Werte und werden aus Effizenzgründen nicht erneut berechnet
-	        		else if (n < m) {
-	        			updatedMatrix[m][n] = updatedMatrix[n][m];
-	        		} else {
+	    			// If we're to the right of the diagonal of the matrix, there is no need to calculate the value as it already has been calculated 
+	        		// on the matrix field to the left of the diagonal (with row and column number switched)
+	        		else if (rowNumber < columnNumber) {
+	        			updatedMatrix[columnNumber][rowNumber] = updatedMatrix[rowNumber][columnNumber];
+	        		} 
+	        		// Else get the new dissimilarity
+	    			else {
 	        			
-	        			// Ist eins der betrachteten Cluster das gemergede? Dann Updaten!
-	        			if (m == minIndex || n == minIndex) {
-	        				double[] centroidK;
-	        				int sizeK;
-	        				// If m is the merged cluster, get the other one (n) as k!
-	        				if (m == minIndex) {
-	        					centroidK = this.calculateCentroid(clusterAffiliation.get(n));
-	        					sizeK = clusterAffiliation.get(n).size();
+	        			// If one of the current clusters (column or row) is one of the two merged ones the matrix field needs to be updated
+	        			if (columnNumber == minIndex || rowNumber == minIndex) {
+	        				double[] centroidClusterC;
+	        				int sizeClusterC;
+	        				// If the column is the merged cluster, get the other one (row) as cluster C! Or otherwise the other way around.
+	        				if (columnNumber == minIndex) {
+	        					centroidClusterC = this.calculateCentroid(clusterAffiliation.get(rowNumber));
+	        					sizeClusterC = clusterAffiliation.get(rowNumber).size();
 	        				} else { 
-	        					centroidK = this.calculateCentroid(clusterAffiliation.get(m));
-	        					sizeK = clusterAffiliation.get(m).size();
+	        					centroidClusterC = this.calculateCentroid(clusterAffiliation.get(columnNumber));
+	        					sizeClusterC = clusterAffiliation.get(columnNumber).size();
 	        				}
 	        				
-	        				updatedMatrix[m][n] = this.calculateLWDissimilarity(centroidA, sizeA, centroidB, sizeB, centroidK, sizeK);
-	        				if (updatedMatrix[m][n] == 0.0) {
+	        				// Update the matrix field
+	        				updatedMatrix[columnNumber][rowNumber] = this.calculateLWDissimilarity(centroidA, sizeA, centroidB, sizeB, centroidClusterC, sizeClusterC);
+	        				if (updatedMatrix[columnNumber][rowNumber] == 0.0) {
         						AmuseLogger.write("WardAdapter - LWDU", Level.WARN, "The updated dissimilarity wasn't calculated correctly!");
         					}
-	        				AmuseLogger.write("WardAdapter - LWUF", Level.DEBUG, "Update at " +m+" and "+n+" to "+ updatedMatrix[m][n]);
+	        				AmuseLogger.write("WardAdapter - LWUF", Level.DEBUG, "Update at " +columnNumber+" and "+rowNumber+" to "+ updatedMatrix[columnNumber][rowNumber]);
 	        			} 
-	        			// Ansonsten den Wert aus der ursprünglichen matirx übernehmen!
+	        			// Otherwise copy the dissimilarity value from the old matrix
 	        			else {
-	        				// Falls m/n größer als der maxIndex ist, dann muss wegen des Wegfallens dieses Clusters in der UpdateMatrix +1 in der Originalen beachtet werden
-	        				if (m < maxIndex && n < maxIndex) {
-	        					updatedMatrix[m][n] = dissimilarityMatrix[m][n];
+	        				// If the column or row number is higher than the maxIndex we need to add 1 to the column/row index due to the reduction of the matrix by one cluster
+	        				if (columnNumber < maxIndex && rowNumber < maxIndex) {
+	        					updatedMatrix[columnNumber][rowNumber] = dissimilarityMatrix[columnNumber][rowNumber];
 	        				} else {
-	        					int updateM = m;
-	        					if (m >= maxIndex) { updateM = m+1; }
-	        					int updateN = n;
-	        					if (n >= maxIndex) { updateN = n+1; }
+	        					int updateColumnIndex = columnNumber;
+	        					if (columnNumber >= maxIndex) { updateColumnIndex = columnNumber+1; }
+	        					int updateRowIndex = rowNumber;
+	        					if (rowNumber >= maxIndex) { updateRowIndex = rowNumber+1; }
 	        					
-	        					updatedMatrix[m][n] = dissimilarityMatrix[updateM][updateN];
+	        					updatedMatrix[columnNumber][rowNumber] = dissimilarityMatrix[updateColumnIndex][updateRowIndex];
 	        					//AmuseLogger.write("WardAdapter - LWUF", Level.DEBUG, "Copied value at " +m+" (updated to "+updateM+") and "+
 	        					//		n+" (updated to "+updateN+") from "+ dissimilarityMatrix[updateM][updateN]);
 	        				}
@@ -558,46 +574,46 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
 		double[][] minResult = new double[3][2];
 		
 		if (matrix[0][1] > matrix[0][2]) {
-			minResult[1][0] = 0; //true minM
-			minResult[0][0] = 2; //true minN
+			minResult[1][0] = 0; //true minM (column)
+			minResult[0][0] = 2; //true minN (row)
 			minResult[2][0] = matrix[0][2]; //true minValue
 			
-			minResult[1][1] = 0; //second minM
-			minResult[0][1] = 1; //second minN
+			minResult[1][1] = 0; //second minM (column)
+			minResult[0][1] = 1; //second minN (row)
 			minResult[2][1] = matrix[0][1]; //second minValue
 		} else {
-			minResult[1][0] = 0; //true minM
-			minResult[0][0] = 1; //true minN
+			minResult[1][0] = 0; //true minM (column)
+			minResult[0][0] = 1; //true minN (row)
 			minResult[2][0] = matrix[0][1]; //true minValue
 			
-			minResult[1][1] = 0; //second minM
-			minResult[0][1] = 2; //second minN
+			minResult[1][1] = 0; //second minM (column)
+			minResult[0][1] = 2; //second minN (row)
 			minResult[2][1] = matrix[0][2]; //second minValue
 		}
 		
 		
-    	for (int m=0; m < matrix.length; m++) {
-    		for (int n=0; n < matrix[0].length; n++) {
+    	for (int columnNumber=0; columnNumber < matrix.length; columnNumber++) {
+    		for (int rowNumber=0; rowNumber < matrix[0].length; rowNumber++) {
     			
-    			if (n>m && 
-    				matrix[n][m] > 0.0 && 
-    				(matrix[n][m] < minResult[2][0] || matrix[n][m] < minResult[2][0])) {
+    			if (rowNumber>columnNumber && 
+    				matrix[rowNumber][columnNumber] > 0.0 && 
+    				(matrix[rowNumber][columnNumber] < minResult[2][0] || matrix[rowNumber][columnNumber] < minResult[2][0])) {
     				
     				// If it's smaller that the true min: Set the second min = true min, and than the true min = current
-    				if (matrix[n][m] < minResult[2][0]) {
+    				if (matrix[rowNumber][columnNumber] < minResult[2][0]) {
     					minResult[1][1] = minResult[1][0];
         				minResult[0][1] = minResult[0][0];
         				minResult[2][1] = minResult[2][0];
         				
-        				minResult[1][0] = m; //true minM
-        				minResult[0][0] = n; //true minN
-        				minResult[2][0] = matrix[n][m]; //true minValue
+        				minResult[1][0] = columnNumber; //true minM
+        				minResult[0][0] = rowNumber; //true minN
+        				minResult[2][0] = matrix[rowNumber][columnNumber]; //true minValue
     				}
     				// Else current must be bigger than true min but smaller than second min, so set second min = current
     				else {
-    					minResult[1][1] = m;
-        				minResult[0][1] = n;
-        				minResult[2][1] = minResult[n][m];
+    					minResult[1][1] = columnNumber;
+        				minResult[0][1] = rowNumber;
+        				minResult[2][1] = minResult[rowNumber][columnNumber];
     				}
     				
     			} 
@@ -643,21 +659,18 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
 	 */
 	private double calculateLWDissimilarity (double[] centroidA, double sizeA, double[] centroidB, double sizeB, double[] centroidC, double sizeC) {
 		double alphaFirst = (sizeA + sizeC) / (sizeA + sizeB + sizeC);
-		//AmuseLogger.write("WardAdapter - LWDU", Level.DEBUG, "Calculating alphaFirst as: (" + sizeA + " + " + sizeC + ") / (" + sizeA+" + "+sizeB+" + "+sizeC+")");
+		// Squared Euclidean Distance of Alpha First
 		double sedAF = this.squaredEuclideanDistance(centroidA, centroidC);
-		//AmuseLogger.write("WardAdapter - LWDU", Level.DEBUG, "Calculating alphaFirst as: " + alphaFirst + " * " + sedAF);
 		alphaFirst = alphaFirst * sedAF;
 		
 		double alphaSecond = (sizeB + sizeC) / (sizeA + sizeB + sizeC);
-		//AmuseLogger.write("WardAdapter - LWDU", Level.DEBUG, "Calculating alphaSecond as: (" + sizeB + " + " + sizeC + ") / (" + sizeA+" + "+sizeB+" + "+sizeC+")");
+		// Squared Euclidean Distance of Alpha Second
 		double sedAS = this.squaredEuclideanDistance(centroidB, centroidC);
-		//AmuseLogger.write("WardAdapter - LWDU", Level.DEBUG, "Calculating alphaSecond as: " + alphaFirst + " * " + sedAS);
 		alphaSecond = alphaSecond * sedAS;
 		
 		double beta = (sizeC) / (sizeA + sizeB + sizeC);
-		//AmuseLogger.write("WardAdapter - LWDU", Level.DEBUG, "Calculating beta as: (" +sizeC+ ") / (" + sizeA+" + "+sizeB+" + "+sizeC+")");
+		// Squared Euclidean Distance of Beta
 		double sedB = this.squaredEuclideanDistance(centroidA, centroidB);
-		//AmuseLogger.write("WardAdapter - LWDU", Level.DEBUG, "Calculating beta as: " + beta + " * " + sedB);
 		beta = beta * sedB;
 		
 		double result = alphaFirst + alphaSecond - beta;
@@ -674,12 +687,11 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
 	 */
 	private double squaredEuclideanDistance (double[] centroidA, double[] centroidB) {
 		
-		//AmuseLogger.write("WardAdapter - squaredEuclideanDistance", Level.DEBUG, "Calculating for centroid length of " + centroidA.length);
 		double distance = 0.0;
 		
 		// Using the squared euclidean distance as distance measure
-		for(int x=0; x < centroidA.length; x ++) {
-			double difference = centroidA[x] - centroidB[x];
+		for(int featureNumber=0; featureNumber < centroidA.length; featureNumber ++) {
+			double difference = centroidA[featureNumber] - centroidB[featureNumber];
 			distance += difference * difference;
 			//AmuseLogger.write("WardAdapter - squaredEuclideanDistance", Level.DEBUG, "Difference = " + distance);
 		}
