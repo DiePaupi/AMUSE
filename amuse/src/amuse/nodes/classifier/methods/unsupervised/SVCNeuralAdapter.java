@@ -141,7 +141,7 @@ public class SVCNeuralAdapter extends AmuseTask implements ClassifierUnsupervise
             ExampleSet exampleSet = dataSetToClassify.convertToRapidMinerExampleSet();
             // Run the RapidMiner-Process 
             IOContainer result = process.run(new IOContainer(exampleSet));
-            AmuseLogger.write("SVC", Level.DEBUG, "RapidMiner SVC finished successfully");
+            AmuseLogger.write(this.getClass().getName(), Level.DEBUG, "RapidMiner SVC finished successfully");
 
          	// Get the RapidMiner Result
             exampleSet = result.get(ExampleSet.class);
@@ -184,9 +184,9 @@ public class SVCNeuralAdapter extends AmuseTask implements ClassifierUnsupervise
         			}
         		}
         		if (maxClusterValue == 0) {
-        			AmuseLogger.write("SVC", Level.ERROR , "There is only 1 giant Cluster and everything is in it!");
+        			AmuseLogger.write(this.getClass().getName(), Level.ERROR , "There is only 1 giant Cluster and everything is in it!");
         		}
-        		AmuseLogger.write("SVC", Level.DEBUG, "There are " + (maxClusterValue+1) + " different clusters.");
+        		AmuseLogger.write(this.getClass().getName(), Level.DEBUG, "There are " + (maxClusterValue+1) + " different clusters.");
         		
         		// Create new Cluster Attributes
         		for (int clusterNumber=0; clusterNumber<maxClusterValue+1; clusterNumber++) {
@@ -217,16 +217,13 @@ public class SVCNeuralAdapter extends AmuseTask implements ClassifierUnsupervise
     			Attribute noise = new NumericAttribute("noise", noisevalueList);
     			amuseDataSet.addAttribute(noise);
     			
-        		AmuseLogger.write("SVC", Level.DEBUG, "SVC successfully edited the result to AMUSE standad");
+        		AmuseLogger.write(this.getClass().getName(), Level.DEBUG, "SVC successfully edited the result to AMUSE standad");
         		
-        		Testing.printMinMax(amuseDataSet);
     		
     		// Give the amuseDataSet to the ClassificationConfiguration so it may be put together and saved there
             ((ClassificationConfiguration)(this.correspondingScheduler.getConfiguration())).setInputToClassify(new DataSetInput(amuseDataSet));
             
-            // Save to .arff file
-            //String outputPath = AmusePreferences.get(KeysStringValue.AMUSE_PATH) + File.separator + "experiments" + File.separator + "SVC_Result.arff";
-            //amuseDataSet.saveToArffFile(new File(outputPath));
+            //Testing.printMinMax(amuseDataSet);
 
         } catch(Exception e) {
             throw new NodeException("Error clustering data: " + e.getMessage());

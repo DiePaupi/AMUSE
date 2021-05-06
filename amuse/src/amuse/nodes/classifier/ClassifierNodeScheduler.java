@@ -296,9 +296,9 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 			for (int att=0; att < attributesToIgnore.size(); att++) {
 				attIgn +=  attributesToIgnore.get(att) + ", ";
 			}
-			AmuseLogger.write("ClassifierNodeScheduler", Level.WARN, "Attributes to ignore: " + attIgn);
+			AmuseLogger.write("ClassifierNodeScheduler", Level.DEBUG, "Attributes to ignore: " + attIgn);
 			
-			//?
+			// Load the categoryDescription if no model path is given
 			DataSetAbstract categoryList = null;
 			try {
 				categoryList = new ArffDataSet(new File(AmusePreferences.getMultipleTracksAnnotationTablePath()));

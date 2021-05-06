@@ -139,7 +139,7 @@ public class FastKMeansAdapter extends AmuseTask implements ClassifierUnsupervis
             ExampleSet exampleSet = dataSetToClassify.convertToRapidMinerExampleSet();
             // Run the RapidMiner-Process 
             IOContainer result = process.run(new IOContainer(exampleSet));
-            AmuseLogger.write("FastKMeansAdapter", Level.DEBUG, "RapidMiner FastKMeansAdapter finished successfully");
+            AmuseLogger.write(this.getClass().getName(), Level.DEBUG, "RapidMiner FastKMeansAdapter finished successfully");
 
          	// Get the RapidMiner Result
             exampleSet = result.get(ExampleSet.class);
@@ -176,9 +176,9 @@ public class FastKMeansAdapter extends AmuseTask implements ClassifierUnsupervis
         			}
         		}
         		if (maxClusterValue == 0) {
-        			AmuseLogger.write("FastKMeansAdapter", Level.ERROR , "There is only 1 giant Cluster and everything is in it!");
+        			AmuseLogger.write(this.getClass().getName(), Level.ERROR , "There is only 1 giant Cluster and everything is in it!");
         		}
-        		AmuseLogger.write("FastKMeansAdapter", Level.DEBUG, "There are " + (maxClusterValue+1) + " different clusters.");
+        		AmuseLogger.write(this.getClass().getName(), Level.DEBUG, "There are " + (maxClusterValue+1) + " different clusters.");
         		
         		// Create new cluster attributes
         		for (int clusterNumber=0; clusterNumber<maxClusterValue+1; clusterNumber++) {
@@ -195,9 +195,7 @@ public class FastKMeansAdapter extends AmuseTask implements ClassifierUnsupervis
         			Attribute clusterX = new NumericAttribute("cluster_" + clusterNumber, clusterXvalueList);
         			amuseDataSet.addAttribute(clusterX);
         		}
-        		AmuseLogger.write("FastKMeansAdapter", Level.DEBUG, "FastKMeansAdapter successfully edited the result to AMUSE standad");
-        		
-        		Testing.printMinMax(amuseDataSet);
+        		AmuseLogger.write(this.getClass().getName(), Level.DEBUG, "FastKMeansAdapter successfully edited the result to AMUSE standard");
             
             // Save the DataSet to .arff file
             //String outputPath = AmusePreferences.get(KeysStringValue.AMUSE_PATH) + File.separator + "experiments" + File.separator + "FastKMeansAdapter_Result.arff";

@@ -114,7 +114,7 @@ public class DBScanAdapter extends AmuseTask implements ClassifierUnsupervisedIn
             ExampleSet exampleSet = dataSetToClassify.convertToRapidMinerExampleSet();
             // Run the RapidMiner-Process 
             IOContainer result = process.run(new IOContainer(exampleSet));
-            AmuseLogger.write("DBScanAdapter", Level.DEBUG, "RapidMiner DBScanAdapter finished successfully");
+            AmuseLogger.write(this.getClass().getName(), Level.DEBUG, "RapidMiner DBScanAdapter finished successfully");
 
          	// Get the RapidMiner Result
             exampleSet = result.get(ExampleSet.class);
@@ -151,9 +151,9 @@ public class DBScanAdapter extends AmuseTask implements ClassifierUnsupervisedIn
         			}
         		}
         		if (maxClusterValue == 0) {
-        			AmuseLogger.write("DBScanAdapter", Level.ERROR , "There is only 1 giant Cluster and everything is in it!");
+        			AmuseLogger.write(this.getClass().getName(), Level.ERROR , "There is only 1 giant Cluster and everything is in it!");
         		}
-        		AmuseLogger.write("DBScanAdapter", Level.DEBUG, "There are " + (maxClusterValue+1) + " different clusters.");
+        		AmuseLogger.write(this.getClass().getName(), Level.DEBUG, "There are " + (maxClusterValue+1) + " different clusters.");
         		
         		// Create new Cluster Attributes
         		for (int clusterNumber=0; clusterNumber<maxClusterValue+1; clusterNumber++) {
@@ -170,16 +170,13 @@ public class DBScanAdapter extends AmuseTask implements ClassifierUnsupervisedIn
         			Attribute clusterX = new NumericAttribute("cluster_" + clusterNumber, clusterXvalueList);
         			amuseDataSet.addAttribute(clusterX);
         		}
-        		AmuseLogger.write("DBScanAdapter", Level.DEBUG, "DBScanAdapter successfully edited the result to AMUSE standad");
+        		AmuseLogger.write(this.getClass().getName(), Level.DEBUG, "DBScanAdapter successfully edited the result to AMUSE standard");
         		
-        		Testing.printMinMax(amuseDataSet);
-    		
+        		
     		// Give the amuseDataSet to the ClassificationConfiguration so it may be put together and saved there
             ((ClassificationConfiguration)(this.correspondingScheduler.getConfiguration())).setInputToClassify(new DataSetInput(amuseDataSet));
             
-            // Save to .arff file
-            //String outputPath = AmusePreferences.get(KeysStringValue.AMUSE_PATH) + File.separator + "experiments" + File.separator + "DBScanAdapter_Result.arff";
-            //amuseDataSet.saveToArffFile(new File(outputPath));
+            Testing.printMinMax(amuseDataSet);
 
         } catch(Exception e) {
             throw new NodeException("Error clustering data: " + e.getMessage());
