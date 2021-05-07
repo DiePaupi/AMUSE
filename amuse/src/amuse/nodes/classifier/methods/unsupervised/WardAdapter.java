@@ -93,6 +93,8 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
         	int numberOfSongs = descriptionOfClassifierInput.size();
         	// If there is only one song the partitions should be kept for music segmentation
         	if (numberOfSongs == 1 ) { keepPartitions = true; }
+        	// If not the partitions will be summarized
+        	else {((ClassificationConfiguration)(this.correspondingScheduler.getConfiguration())).setPartitionsAlreadySummerized(true);}
         	int numberOfFeatures = dataSetToClassify.getAttributeCount();
         	//AmuseLogger.write("WardAdapter - initializing", Level.DEBUG, "There are " + numberOfFeatures + " to be saved.");
         	
@@ -306,7 +308,8 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
     		for (int featureNumber=0; featureNumber < numberOfFeatures; featureNumber++ ) {
     			List<Double> featureXList = new ArrayList<Double>();
     			
-    			for (int songNumber=0; songNumber < numberOfSongs; songNumber++) {
+    			// allValues.length is used to determine the song number, so in case of music segmentation the partition number is used instead
+    			for (int songNumber=0; songNumber < allValues.length; songNumber++) {
     				featureXList.add(allValues[songNumber][featureNumber]);
     			}
     			
@@ -318,12 +321,12 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
     		for (int clusterNumber=0; clusterNumber < clusterAffiliation.size(); clusterNumber++ ) {
     			List<Double> clusterCList = new ArrayList<Double>();
     			
-    			for (int i=0; i < numberOfSongs; i++) {
+    			for (int songNumber=0; songNumber < allValues.length; songNumber++) {
     				
-    				if (clusterAffiliation.get(clusterNumber).contains(i)) {
-    					clusterCList.add(i, 1.0);
+    				if (clusterAffiliation.get(clusterNumber).contains(songNumber)) {
+    					clusterCList.add(songNumber, 1.0);
     				} else {
-    					clusterCList.add(i, 0.0);
+    					clusterCList.add(songNumber, 0.0);
     				}
     			}
     			
@@ -335,7 +338,6 @@ public class WardAdapter extends AmuseTask implements ClassifierUnsupervisedInte
     		
     		// Give the amuseDataSet to the ClassificationConfiguration so it may be put together and saved there
         	// The ClassifierNodeScheduler proceedTask(...) returns or saves an ArrayList<ClassifiedSongPartitionsDescription>
-    		((ClassificationConfiguration)(this.correspondingScheduler.getConfiguration())).setPartitionsAlreadySummerized(true);
             ((ClassificationConfiguration)(this.correspondingScheduler.getConfiguration())).setInputToClassify(new DataSetInput(amuseDataSet));
     		//amuseDataSet.saveToArffFile(new File(outputPath + "Ward_Result.arff"));
     		

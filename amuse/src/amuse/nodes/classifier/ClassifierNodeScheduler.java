@@ -1054,8 +1054,10 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 		ArrayList<ClassifiedSongPartitions> classificationResults = new ArrayList<ClassifiedSongPartitions>();
 		
 		DataSet d = ((DataSetInput)((ClassificationConfiguration)taskConfiguration).getInputToClassify()).getDataSet();
+		// Check if the partitions of each song have already been summarized (currently only the Ward Adapter does that)
 		boolean partitionsAlreadySummerized = ((ClassificationConfiguration)taskConfiguration).getPartitionsAlreadySummerized();
 		
+		// If it's unsupervised classification the number of clusters must be counted
 		if (!isSupervised) {
 			this.updateTheNumberOfClusters(d);
 		} 
@@ -1191,6 +1193,25 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 				this.createVisual(songNames, clusterAffiliations, classificationOutput + "_visual.tex");
 			}
 			// If the classification results for each partition should be saved
+			// In case of music segmentation
+			else if (classifierResult.size() == 1) {
+				
+				List<String> songNames = new ArrayList<String>();
+				List<double[]> clusterAffiliations = new ArrayList<double[]>();
+				
+				for (int partitions = 0; partitions < classifierResult.get(0).getRelationships().length; partitions++) {
+					double[] currentSongsClusterAffiliations = new double[numberOfCategories];
+					
+					for(int category=0;category<numberOfCategories;category++) {
+						currentSongsClusterAffiliations[category] = classifierResult.get(0).getRelationships()[partitions][category];
+					}
+					
+					clusterAffiliations.add(partitions, currentSongsClusterAffiliations);
+				}
+				
+				songNames.add(classifierResult.get(0).getPathToMusicSong());
+				this.createVisual(songNames, clusterAffiliations, classificationOutput + "_visual.tex");
+			}
 			else {
 				
 				// Go through all songs
@@ -1212,25 +1233,6 @@ public class ClassifierNodeScheduler extends NodeScheduler {
 						values_writer.writeBytes(sep);
 					}
 					
-				}
-				
-				// In case of music segmentation
-				if (classifierResult.size() == 1) {
-					List<String> songNames = new ArrayList<String>();
-					List<double[]> clusterAffiliations = new ArrayList<double[]>();
-					
-					for (int partitions = 0; partitions < classifierResult.get(0).getRelationships().length; partitions++) {
-						double[] currentSongsClusterAffiliations = new double[numberOfCategories];
-						
-						for(int category=0;category<numberOfCategories;category++) {
-							currentSongsClusterAffiliations[category] = classifierResult.get(0).getRelationships()[partitions][category];
-						}
-						
-						clusterAffiliations.add(partitions, currentSongsClusterAffiliations);
-					}
-					
-					songNames.add(classifierResult.get(0).getPathToMusicSong());
-					this.createVisual(songNames, clusterAffiliations, classificationOutput + "_visual.tex");
 				}
 			}
 			values_writer.close();
