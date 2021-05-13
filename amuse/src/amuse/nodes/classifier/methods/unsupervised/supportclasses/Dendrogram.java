@@ -88,25 +88,23 @@ public class Dendrogram {
 	}
 	
 	
-	/** @return The Dendogram as String */ //----------------------------------------------------------------------------------------------------------------------
+	/** @return The Dendrogram as String */ //----------------------------------------------------------------------------------------------------------------------
 	public String printClusters() {
 		
 		String result = "";
-		
 		if (clusters.size() > 0) {
 			
-			// Get the dendograms for every cluster and get their nice strings
-			for (int c=0; c < clusters.size(); c++) {
-				Node current = clusters.get(c);
+			// Get the dendrograms for every cluster and get their nice strings
+			for (int clusterNumber=0; clusterNumber < clusters.size(); clusterNumber++) {
+				Node current = clusters.get(clusterNumber);
 				
-				// Get the cluster specific dendogram array
+				// Get the cluster specific dendrogram array
 				int maxHightofThisCluster = this.findHeight(current);
-				
 				String[][] outputStrings = new String[maxHightofThisCluster][current.getValue().size()];
 				int[][] kindOfEntries = new int[maxHightofThisCluster][current.getValue().size()];
 				this.fillOutputArray(outputStrings, maxHightofThisCluster-1, current.getValue().size()-1, current, kindOfEntries);
 				
-				// Get the dendogram array as string and add it to the result string
+				// Get the dendrogram array as string and add it to the result string
 				String formatInfo = this.makeMatrixPretty(outputStrings, kindOfEntries);
 				
 				result += this.getMatrixAsFormattedString(outputStrings, formatInfo) + "\n";
@@ -123,7 +121,15 @@ public class Dendrogram {
 		return result;
 	}
 	
-	
+	/**
+	 * Recursive method to basically turn a dendrogram (corresponding to one cluster) into a matrix.
+	 * @param output      = The output matrix in which everything will be saved
+	 * @param column      = The current column position
+	 * @param row         = The current row position
+	 * @param currentNode = The given node
+	 * @param kindOfEntry = The node type matrix, where corresponding to the output matrix the kind of matrix entry will be save here
+	 *                      (Completely empty node = 0, Leaf node = 1, middle node = 2, merge needs to be displayed here = 5, fill pipes ad edges = 6)
+	 */
 	private void fillOutputArray (String[][] output, int column, int row, Node currentNode, int[][] kindOfEntry) {
 		
 		if (currentNode != null && output != null) {
@@ -131,6 +137,7 @@ public class Dendrogram {
 			// Fill corresponding table entry for this node
 			output[column][row] = this.integerListToString(currentNode.getValue());
 			
+			// If this is NOT a leaf node
 			if (currentNode.getLeft() != null && currentNode.getRight() != null) {
 				kindOfEntry[column][row] = 2;
 				
@@ -156,17 +163,25 @@ public class Dendrogram {
 	}
 	
 	
+	/**
+	 * Returns a matrix-dendrogram as String
+	 * @param matrix     = Matrix representing a dendrogram
+	 * @param formatInfo = Formatting Info String
+	 * @return The given matrix as String
+	 */
 	private String getMatrixAsFormattedString (String[][] matrix,  String formatInfo) {
 		
 		String result = "";
 		
-		for (int x=0; x < matrix[0].length; x++) {
+		// Go through the matrix and get it row by row
+		for (int rowNumber=0; rowNumber < matrix[0].length; rowNumber++) {
 			String[] currentRow = new String[matrix.length];
 			
-			for (int i=0; i < matrix.length; i++) {
-				currentRow[i] = matrix[i][x];
+			for (int columnNumber=0; columnNumber < matrix.length; columnNumber++) {
+				currentRow[columnNumber] = matrix[columnNumber][rowNumber];
 			}
 			
+			// Format the row and add it to the resulting matrix String
 			String rowResult = String.format(formatInfo, currentRow);
 			result += rowResult + "\n";
 		}
@@ -175,21 +190,28 @@ public class Dendrogram {
 	}
 	
 	
+	/**
+	 * 
+	 * @param matrix      = Matrix representing a dendrogram
+	 * @param kindOFEntry = Matrix containing information about each entry of the given "matrix"
+	 *                      (Completely empty node = 0, Leaf node = 1, middle node = 2, merge needs to be displayed here = 5, fill pipes ad edges = 6)
+	 * @return A String to be used as formatting info, contains the structure of the metrix-dendrogram
+	 * @throws IndexOutOfBoundsException
+	 */
 	private String makeMatrixPretty (String[][] matrix, int[][] kindOFEntry) throws IndexOutOfBoundsException {
 		
 		String formatInfo = "";
 		
 		// Go trough each column
-		for (int s=0; s < matrix.length; s++) {
+		for (int columnNumber=0; columnNumber < matrix.length; columnNumber++) {
 			
-			// Get the maximal char count in this column -------------------------------------------------------------------------------------------
+			// Get the maximal char count in this column -----------------------------------------------------------------------------------------------------------
 			int maxLengthOfThisColumn = 0;
 			String maxStringOfThisColumn = "";
 			
-			for (int z=0; z < matrix[0].length; z++) {
-				String currentString = matrix[s][z];
+			for (int rowNumber=0; rowNumber < matrix[0].length; rowNumber++) {
+				String currentString = matrix[columnNumber][rowNumber];
 				
-				//TODO: Is the default for a String[][] "" and not null?
 				if (currentString != null && !currentString.equals("")) {
 					if (currentString.length() > maxLengthOfThisColumn) {
 						maxLengthOfThisColumn = currentString.length();
@@ -198,20 +220,21 @@ public class Dendrogram {
 				}
 			}
 			
+			// Save the format for this column
 			int columnSize = maxLengthOfThisColumn+3;
-			//String ThisColumnFormat = ("%"+columnSize+"."+columnSize+"s");  // fixed size, right aligned
-			String ThisColumnFormat = ("%"+s+"$"+columnSize+"s");
+				//String ThisColumnFormat = ("%"+columnSize+"."+columnSize+"s");  // fixed size, right aligned
+			String ThisColumnFormat = ("%"+columnNumber+"$"+columnSize+"s");
 			formatInfo += ThisColumnFormat + " ";
 			
-			// Adjust every entry of this column
-			for (int z=0; z < matrix[0].length; z++) {
+			// Adjust every entry of this column -------------------------------------------------------------------------------------------------------------------
+			for (int rowNumber=0; rowNumber < matrix[0].length; rowNumber++) {
 				
 				// If this entry has a cluster entry: -----------------------------------------------------------------------------------------------
-				if (matrix[s][z] != null && !matrix[s][z].equals("")) {
+				if (matrix[columnNumber][rowNumber] != null && !matrix[columnNumber][rowNumber].equals("")) {
 					
-					// Get this entrys char count
-					int thisEntrysCharCount = matrix[s][z].length();
-					String thisEntrysString = matrix[s][z];
+					// Get this entries char count
+					int thisEntrysCharCount = matrix[columnNumber][rowNumber].length();
+					String thisEntrysString = matrix[columnNumber][rowNumber];
 					
 					if (maxStringOfThisColumn.length() > thisEntrysCharCount) {
 						
@@ -220,7 +243,7 @@ public class Dendrogram {
 						
 						// Figure out if the left space should be filled with blanks or lines 
 						// ( (kindOFEntry[s][z] == 2) means it's a middle node, so it has to be lines )
-						if (kindOFEntry[s][z] == 2) {
+						if (kindOFEntry[columnNumber][rowNumber] == 2) {
 							
 							// Fill lines: for every char of difference (minus commas) add two - before the actual string
 							// For commas there'll be only one - added
@@ -232,7 +255,7 @@ public class Dendrogram {
 						// ( (kindOFEntry[s][z] == 1) means it's a leaf node, so spaces are in order )
 						// Fill blanks: for every char of difference (minus commas) add two spaces before the actual string
 						// For commas there'll be only one space added
-						else if (kindOFEntry[s][z] == 1) {
+						else if (kindOFEntry[columnNumber][rowNumber] == 1) {
 							for (int v=0; v < fillersToBeSet+3; v++) {
 								thisEntrysString = " " + thisEntrysString;
 							}
@@ -240,28 +263,28 @@ public class Dendrogram {
 					}
 					
 					// Add a nice ending IF this is not he last column
-					if (s != matrix.length - 1) {
+					if (columnNumber != matrix.length - 1) {
 						thisEntrysString += " --";
 					}
 					
-					matrix[s][z] = StringUtils.center(thisEntrysString, columnSize);
+					matrix[columnNumber][rowNumber] = StringUtils.center(thisEntrysString, columnSize);
 				}
-				// If this is an empty entry: --------------------------------------------------------------------------------------------------------
+				// If this is an empty entry: -------------------------------------------------------------------------------------------------------
 				else {
 					
-					if (s >= 0 && s < matrix.length) {
+					// If the column number is plausible
+					if (columnNumber >= 0 && columnNumber < matrix.length) {
 						
 						String filler = "";
 						
-						//TODO: Is 0 the default entry for a int[][]?
 						// kindOFEntry[s][z] == 0: It's a completely empty entry
-						if (kindOFEntry[s][z] == 0 ) {
+						if (kindOFEntry[columnNumber][rowNumber] == 0 ) {
 							for (int f=0; f < columnSize; f++) {
 								filler += " ";
 							}
 						}
 						// kindOFEntry[s][z] == 5: Here needs to be a merge!
-						else if (kindOFEntry[s][z] == 5) {
+						else if (kindOFEntry[columnNumber][rowNumber] == 5) {
 							
 							char[] fill = new char[columnSize];
 							for (int f=0; f<columnSize; f++) {
@@ -280,7 +303,7 @@ public class Dendrogram {
 							
 						}
 						// kindOFEntry[s][z] == 6: Here needs to be a pipe!
-						else if (kindOFEntry[s][z] == 6) {
+						else if (kindOFEntry[columnNumber][rowNumber] == 6) {
 							
 							//for (int f=0; f < (maxLengthOfThisColumn -2) - (2*commaCount); f++) {
 							//	filler += " ";
@@ -296,7 +319,7 @@ public class Dendrogram {
 									+ "There was no matching kindOFEntry[s][z] entry!");
 						}
 						
-						matrix[s][z] = StringUtils.center(filler, columnSize);
+						matrix[columnNumber][rowNumber] = StringUtils.center(filler, columnSize);
 						
 					}
 					else {
@@ -314,7 +337,8 @@ public class Dendrogram {
 	
 	
 	/**
-	 * @param currentNode
+	 * A recursive method to list all song paths in a given dendrogram
+	 * @param currentNode = Given node (= dendrogram)
 	 * @return A String listing all the leaf nodes with their id and then their name (path)
 	 */
 	private String showNamesOfClusterSongs (Node currentNode) {
@@ -323,10 +347,15 @@ public class Dendrogram {
 		if (currentNode != null) {
 			
 			int depth = currentNode.getValue().size();
+			
+			// If this is a leaf node
 			if (depth == 1) {
 				result += currentNode.getID() + ": " + currentNode.getName() + "\n";
-			} else {
+			} 
+			// If this is a middle or root node
+			else {
 				
+				// Get the song paths of the left child
 				String leftChildNames = "";
 				if (currentNode.getLeft() == null) {
 					AmuseLogger.write("DENDOGRAM", Level.WARN, "The current node (ID = " + currentNode.getID() + 
@@ -335,6 +364,7 @@ public class Dendrogram {
 					leftChildNames = this.showNamesOfClusterSongs(currentNode.getLeft());
 				}
 				
+				// Get the song paths of the right child
 				String rightChildNames = "";
 				if (currentNode.getRight() == null) {
 					AmuseLogger.write("DENDOGRAM", Level.WARN, "The current node (ID = " + currentNode.getID() + 
@@ -342,6 +372,8 @@ public class Dendrogram {
 				} else {
 					rightChildNames = this.showNamesOfClusterSongs(currentNode.getRight());
 				}
+				
+				// Put the results of the children together
 				result += leftChildNames + rightChildNames;
 			}
 		}
