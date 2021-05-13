@@ -252,8 +252,8 @@ public class SupportVectorClusteringAdapter extends AmuseTask implements Classif
             //Testing.printMinMax(amuseDataSet);
             
             // Save to .arff file
-            String outputPath = AmusePreferences.get(KeysStringValue.AMUSE_PATH) + File.separator + "experiments" + File.separator + "SVC_Result.arff";
-            amuseDataSet.saveToArffFile(new File(outputPath));
+            //String outputPath = AmusePreferences.get(KeysStringValue.AMUSE_PATH) + File.separator + "experiments" + File.separator + "SVC_Result.arff";
+            //amuseDataSet.saveToArffFile(new File(outputPath));
 
         } catch(Exception e) {
             throw new NodeException("Error clustering data: " + e.getMessage());

@@ -105,9 +105,15 @@ public abstract class DataSetAbstract implements Serializable {
 			System.out.println("");
 		}
 	}
+	
+	/**
+	 * Prints the DataSet in the AMUSE logger
+	 */
 	public void showSet() {
 		AmuseLogger.write("DataSetAbstract", Level.DEBUG, "BEGINNING TO SHOW DATASET");
     	AmuseLogger.write("DataSetAbstract", Level.DEBUG, ("DataSetName: " + this.getName()));
+    	
+    	// Print all the attributes
 		for (Attribute at : attributes) {
 			if (at instanceof NumericAttribute) {
 				AmuseLogger.write("DataSetAbstract", Level.DEBUG, ("NumericAttribute: " + at.getName()));
@@ -117,14 +123,14 @@ public abstract class DataSetAbstract implements Serializable {
 				AmuseLogger.write("DataSetAbstract", Level.DEBUG, ("NominalAttribute: " + at.getName()));
 			}
 		}
-		AmuseLogger.write("DataSetAbstract", Level.DEBUG, ("This DataSet contains " + getValueCount()
-				+ " values."));
-		for (int i = 0; i < this.getAttribute(0).getValueCount(); i++) {
+		
+		// Print all values
+		AmuseLogger.write("DataSetAbstract", Level.DEBUG, ("This DataSet contains " + getValueCount() + " values."));
+		for (int valueNumber = 0; valueNumber < this.getAttribute(0).getValueCount(); valueNumber++) {
 			for (Attribute at : attributes) {
-				AmuseLogger.write("DataSetAbstract", Level.DEBUG, ("" + at.getValueAt(i) + "\t"));
+				AmuseLogger.write("DataSetAbstract", Level.DEBUG, ("" + at.getValueAt(valueNumber) + "\t"));
 			}
-			AmuseLogger.write("DataSetAbstract", Level.DEBUG, ("This was value row " + i + " +1 since it starts at 0"));
-			AmuseLogger.write("DataSetAbstract", Level.DEBUG, (""));
+			AmuseLogger.write("DataSetAbstract", Level.DEBUG, ("This was value row " + (valueNumber+1) + "\n"));
 		}
 		AmuseLogger.write("DataSetAbstract", Level.DEBUG, "FINISHED TO SHOW DATASET");
 	}

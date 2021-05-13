@@ -52,10 +52,8 @@ import amuse.preferences.KeysStringValue;
 import amuse.util.AmuseLogger;
 
 /**
- * Describes the parameters for a classification task, which will be specified within the non-abstract
- * classes Supervised- and UnClassificationConfiguration
+ * Describes the parameters for a classification task
  * @author Igor Vatolkin
- *
  */
 public class ClassificationConfiguration extends TaskConfiguration {
 
@@ -128,7 +126,7 @@ public class ClassificationConfiguration extends TaskConfiguration {
 	 */
 	private int numberOfValuesPerWindow = -1;
 	
-	/** Sets if the adapter class has already summarized the partitions - Default is false, everything else must be specifically set */
+	/** Indicates if the adapter class has already summarized the partitions - Is currently only used by the WardAdapter */
 	private boolean partitionsAlreadySummerized = false;
 	
 	/** Indicates if the last cluster by unsupervised leaning methods is noise */
@@ -138,18 +136,18 @@ public class ClassificationConfiguration extends TaskConfiguration {
 	/**
 	 * STANDARD supervised CONSTRUCTOR
 	 * 
-	 * @param inputToClassify				= Defines the input to classify
-	 * @param inputSourceType				= Defines the input source type
-	 * @param attributesToIgnore			= Defines the features of the processed feature files (or the ready input) which should not be used for the classification
-	 * @param inputFeatures					= Is a description of the input features
-	 * @param inputFeatureType				= Defines the type of the input features
-	 * @param classificationWindowSize		= Defines the size of the classification windows
-	 * @param classificationWindowOverlap	= Defines the overlap of the classification windows
-	 * @param algorithmDescription			= Id and parameters of the classification algorithm from classifierTable.arff
-	 * @param attributesToPredict			s= Defines the categories of the category file of the annotation database (supervised only)
-	 * @param modelType						= Defines the model type
-	 * @param mergeSongResults				= Flag if song relationship grade should be averaged over all partitions (="1")
-	 * @param classificationOutput			= Defines the destination for classification output
+	 * @param inputToClassify             = Defines the input to classify
+	 * @param inputSourceType             = Defines the input source type
+	 * @param attributesToIgnore          = Defines the features of the processed feature files (or the ready input) which should not be used for the classification
+	 * @param inputFeatures               = Is a description of the input features
+	 * @param inputFeatureType            = Defines the type of the input features
+	 * @param classificationWindowSize    = Defines the size of the classification windows
+	 * @param classificationWindowOverlap = Defines the overlap of the classification windows
+	 * @param algorithmDescription        = Id and parameters of the classification algorithm from classifierTable.arff
+	 * @param attributesToPredict        s= Defines the categories of the category file of the annotation database (supervised only)
+	 * @param modelType                   = Defines the model type
+	 * @param mergeSongResults            = Flag if song relationship grade should be averaged over all partitions (="1")
+	 * @param classificationOutput        = Defines the destination for classification output
 	 */
 	public ClassificationConfiguration(
 			DataInputInterface inputToClassify,
@@ -168,6 +166,7 @@ public class ClassificationConfiguration extends TaskConfiguration {
 		this.inputToClassify = inputToClassify;
 		this.inputSourceType = inputSourceType;
 		this.inputFeatureType = inputFeatureType;
+		
 			if(inputFeatureType == InputFeatureType.RAW_FEATURES) {
 				this.inputFeatureList = new FeatureTable(new File(inputFeatures));
 				List<Feature> features = inputFeatureList.getFeatures();
@@ -183,6 +182,7 @@ public class ClassificationConfiguration extends TaskConfiguration {
 				this.inputFeatureList = null;
 				this.inputFeaturesDescription = inputFeatures;
 			}
+			
 		this.classificationWindowSize = classificationWindowSize;
 		this.classificationWindowOverlap = classificationWindowOverlap;
 		this.algorithmDescription = algorithmDescription;
@@ -191,6 +191,7 @@ public class ClassificationConfiguration extends TaskConfiguration {
 		this.mergeSongResults = mergeSongResults;
 		this.classificationOutput = classificationOutput;
 		
+			// Check if the correct constructor was used
 			if(modelType.getMethodType() == MethodType.SUPERVISED) {
 				this.modelType = modelType;
 				this.attributesToPredict = attributesToPredict;
@@ -205,17 +206,17 @@ public class ClassificationConfiguration extends TaskConfiguration {
 	/**
 	 * STANDARD UNsupervised CONSTRUCTOR
 	 * 
-	 * @param inputToClassify				= Defines the input to classify
-	 * @param inputSourceType				= Defines the input source type
-	 * @param attributesToIgnore			= Defines the features of the processed feature files (or the ready input) which should not be used for the classification
-	 * @param inputFeatures					= Is a description of the input features
-	 * @param inputFeatureType				= Defines the type of the input features
-	 * @param classificationWindowSize		= Defines the size of the classification windows
-	 * @param classificationWindowOverlap	= Defines the overlap of the classification windows
-	 * @param algorithmDescription			= Id and parameters of the classification algorithm from classifierTable.arff
-	 * @param modelType						= Defines the model type
-	 * @param mergeSongResults				= Flag if song relationship grade should be averaged over all partitions (="1")
-	 * @param classificationOutput			= Defines the destination for classification output
+	 * @param inputToClassify             = Defines the input to classify
+	 * @param inputSourceType             = Defines the input source type
+	 * @param attributesToIgnore          = Defines the features of the processed feature files (or the ready input) which should not be used for the classification
+	 * @param inputFeatures               = Is a description of the input features
+	 * @param inputFeatureType            = Defines the type of the input features
+	 * @param classificationWindowSize    = Defines the size of the classification windows
+	 * @param classificationWindowOverlap = Defines the overlap of the classification windows
+	 * @param algorithmDescription        = Id and parameters of the classification algorithm from classifierTable.arff
+	 * @param modelType                   = Defines the model type
+	 * @param mergeSongResults            = Flag if song relationship grade should be averaged over all partitions (="1")
+	 * @param classificationOutput        = Defines the destination for classification output
 	 */
 	public ClassificationConfiguration(
 			DataInputInterface inputToClassify,
@@ -233,6 +234,7 @@ public class ClassificationConfiguration extends TaskConfiguration {
 		this.inputToClassify = inputToClassify;
 		this.inputSourceType = inputSourceType;
 		this.inputFeatureType = inputFeatureType;
+		
 			if(inputFeatureType == InputFeatureType.RAW_FEATURES) {
 				this.inputFeatureList = new FeatureTable(new File(inputFeatures));
 				List<Feature> features = inputFeatureList.getFeatures();
@@ -248,6 +250,7 @@ public class ClassificationConfiguration extends TaskConfiguration {
 				this.inputFeatureList = null;
 				this.inputFeaturesDescription = inputFeatures;
 			}
+			
 		this.classificationWindowSize = classificationWindowSize;
 		this.classificationWindowOverlap = classificationWindowOverlap;
 		this.algorithmDescription = algorithmDescription;
@@ -255,6 +258,7 @@ public class ClassificationConfiguration extends TaskConfiguration {
 		this.mergeSongResults = mergeSongResults;
 		this.classificationOutput = classificationOutput;
 		
+			// Check if the correct constructor was used
 			if (modelType.getMethodType() == MethodType.UNSUPERVISED) {
 				this.modelType = modelType;
 				this.attributesToPredict = null;
@@ -354,6 +358,7 @@ public class ClassificationConfiguration extends TaskConfiguration {
 		this.classificationOutput = classificationOutput;
 		this.processedFeatureDatabase = AmusePreferences.get(KeysStringValue.PROCESSED_FEATURE_DATABASE);
 		
+			// Check if the correct constructor was used
 			if(modelType.getMethodType() == MethodType.SUPERVISED) {
 				this.modelType = modelType;
 				this.attributesToPredict = attributesToPredict;
@@ -448,6 +453,7 @@ public class ClassificationConfiguration extends TaskConfiguration {
 		this.classificationOutput = classificationOutput;
 		this.processedFeatureDatabase = AmusePreferences.get(KeysStringValue.PROCESSED_FEATURE_DATABASE);
 		
+			// Check if the correct constructor was used
 			if(modelType.getMethodType() == MethodType.UNSUPERVISED) {
 				this.modelType = modelType;
 				this.attributesToPredict = null;
@@ -539,6 +545,7 @@ public class ClassificationConfiguration extends TaskConfiguration {
 		this.classificationOutput = classificationOutput;
 		this.processedFeatureDatabase = AmusePreferences.get(KeysStringValue.PROCESSED_FEATURE_DATABASE);
 		
+		// Check if the correct constructor was used
 		if(modelType.getMethodType() == MethodType.SUPERVISED) {
 			this.modelType = modelType;
 			this.groundTruthCategoryId = groundTruthSource;
@@ -625,6 +632,7 @@ public class ClassificationConfiguration extends TaskConfiguration {
 		this.classificationOutput = classificationOutput;
 		this.processedFeatureDatabase = AmusePreferences.get(KeysStringValue.PROCESSED_FEATURE_DATABASE);
 		
+		// Check if the correct constructor was used
 		if(modelType.getMethodType() == MethodType.UNSUPERVISED) {
 			this.modelType = modelType;
 			this.attributesToPredict = null;
@@ -719,7 +727,7 @@ public class ClassificationConfiguration extends TaskConfiguration {
 				ist = InputSourceType.READY_INPUT;
 			}
 			
-			// Do supervised methods parameters need to be set?
+			// Create the classification task according to the method type
 			if (currentMethodType == MethodType.SUPERVISED) {
 					int currentGroundTruthSource = classifierConfig.getGroundTruthSourceAttribute().getValueAt(i).intValue();
 							
